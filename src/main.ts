@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { watch, type FSWatcher } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ARCANUM_DIR, CLAUDE_DIR, PORT } from "./paths";
@@ -12,7 +13,8 @@ import { dismiss, loadDismissed, restore } from "./dismissed";
 import { planResume, planSummon } from "./summon";
 import { readRegistry } from "./registry";
 import { CLAUDE_DIR as CD } from "./paths";
-import { loadConfig } from "./realms";
+import { loadConfig, saveConfig } from "./realms";
+import { found } from "./found";
 import type { Model } from "./types";
 import { realEnv } from "./realms";
 import { createArcanumServer } from "./server";
@@ -90,6 +92,15 @@ const app = createArcanumServer({ uploadsDir, uiDir: path.join(root, "ui"), font
     const d = loadDismissed(ARCANUM_DIR)[id]; if (!d) return undefined;
     restore(ARCANUM_DIR, id); schedule();
     return { ok: true, message: `${d.name} is back.` };
+  },
+  found(req) {
+    const cfg = loadConfig(ARCANUM_DIR);
+    try {
+      const r = found(cfg, req, realEnv);
+      saveConfig(ARCANUM_DIR, cfg); schedule();
+      console.log(`found → ${r.realm.name} at ${r.realm.lands[0]}${r.created ? " (new folder)" : ""}${r.git ? " + git" : ""}`);
+      return { ok: true, realmId: r.realm.id, message: `The realm of ${r.realm.name} is founded${r.created ? `, in a new folder ${r.realm.lands[0].replace(os.homedir(), "~")}` : ""}${r.git ? " (a git repo)" : ""}.` };
+    } catch (e) { return { ok: false, message: (e as Error).message }; }
   },
   async summon(realmId, req) {
     const r = loadConfig(ARCANUM_DIR).realms.find(x => x.id === realmId);

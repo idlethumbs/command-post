@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { absorbRealm, assignRealms, emptyConfig, humanize, loadConfig, R, saveConfig, updateRealm, WILDS_ID, type RealmEnv } from "../src/realms";
+import { absorbRealm, assignRealms, emptyConfig, foundRealm, humanize, loadConfig, R, saveConfig, updateRealm, WILDS_ID, type RealmEnv } from "../src/realms";
 
 const repos: Record<string, string> = {
   "/p/agent-rails": "/p/agent-rails",
@@ -22,11 +22,29 @@ test("a repo and its worktrees share one realm", () => {
   expect(cfg.realms[0]).toMatchObject({ name: "Agent Rails", lands: ["/p/agent-rails"] });
 });
 
-test("a repo inside a non-git folder joins that folder's realm", () => {
+test("a plain folder goes to the Wilds; only repos found realms on their own", () => {
   const cfg = emptyConfig();
-  const m = assignRealms(["/p/orchestration/orchestrator", "/p/orchestration"], cfg, env, 1);
-  expect(m.get("/p/orchestration/orchestrator")).toBe(m.get("/p/orchestration"));
-  expect(cfg.realms).toHaveLength(1);
+  const m = assignRealms(["/p/orchestration/orchestrator", "/p/orchestration", "/p/notes"], cfg, env, 1);
+  expect(m.get("/p/orchestration")).toBe(WILDS_ID);
+  expect(m.get("/p/notes")).toBe(WILDS_ID);
+  expect(m.get("/p/orchestration/orchestrator")).toBe("orchestrator");
+});
+
+test("a plain-folder realm you founded still gathers what's inside it", () => {
+  const cfg = emptyConfig();
+  foundRealm(cfg, { name: "Orchestration", root: "/p/orchestration" }, env, 1);
+  const m = assignRealms(["/p/orchestration/orchestrator", "/p/orchestration"], cfg, env, 2);
+  expect(m.get("/p/orchestration/orchestrator")).toBe("orchestration");
+  expect(m.get("/p/orchestration")).toBe("orchestration");
+});
+
+test("founding refuses workspace folders and folders that already belong to a realm", () => {
+  const cfg = emptyConfig();
+  expect(() => foundRealm(cfg, { name: "Everything", root: "/p" }, env, 1)).toThrow(/holds many projects/);
+  foundRealm(cfg, { name: "Notes", root: "/p/notes" }, env, 1);
+  expect(() => foundRealm(cfg, { name: "Notes again", root: "/p/notes" }, env, 1)).toThrow(/already the realm “Notes”/);
+  expect(() => foundRealm(cfg, { name: "  ", root: "/p/other" }, env, 1)).toThrow(/Name/);
+  expect(cfg.realms.find(r => r.id === "notes")).toMatchObject({ name: "Notes", lands: ["/p/notes"] });
 });
 
 test("container folders and temp dirs go to the Wilds", () => {

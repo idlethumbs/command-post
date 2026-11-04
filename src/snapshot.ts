@@ -5,10 +5,10 @@ import { departedModel, departedName, findEnded } from "./departed";
 import { portalPrecision } from "./portal";
 import { replyCapability, sealCapability } from "./send";
 import { detectHost } from "./procs";
-import { assignRealms, loadConfig, saveConfig, type RealmEnv } from "./realms";
+import { assignRealms, loadConfig, saveConfig, WILDS_ID, type RealmEnv } from "./realms";
 import { readRegistry } from "./registry";
 import { findTranscript, parseTranscript, readTail } from "./transcript";
-import type { Host, ProcTable, Session, Snapshot, TranscriptSummary } from "./types";
+import type { DepartedMage, Host, ProcTable, Session, Snapshot, TranscriptSummary } from "./types";
 
 const WHERE: Record<Host, string> = {
   cmux: "cmux", warp: "Warp", iterm: "iTerm", tmux: "tmux", ghostty: "Ghostty", terminal: "Terminal", vscode: "VS Code", bg: "Background", unknown: "Unknown terminal",
@@ -57,11 +57,14 @@ export function buildSnapshot(d: SnapshotDeps): Snapshot {
     };
   });
   for (const s of sessions) { s.portal = portalPrecision(s, !!d.hasCmux); s.reply = replyCapability(s, !!d.hasCmux); s.seal = sealCapability(s, !!d.hasCmux); }
-  const departed = ended.map(e => {
+  const departed: DepartedMage[] = ended.map(e => {
     const last = e.t.lastAssistantText?.text;
     return { id: e.id, realmId: realmOf.get(e.t.cwd!)!, name: departedName(e), title: e.t.aiTitle, model: departedModel(e), modelId: e.t.model, endedAt: e.endedAt,
       cwd: e.t.cwd!, branch: e.t.gitBranch, briefing: briefingOf(e.t), lastText: last && (last.length > 4000 ? "…" + last.slice(-4000) : last), recent: e.t.recent };
   });
+  // a Wilds mage's folder can become a realm, unless it's a workspace folder holding many projects
+  const promotable = (realmId: string, cwd: string) => realmId === WILDS_ID && !d.env.isWilds(cwd);
+  for (const x of [...sessions, ...departed]) if (promotable(x.realmId, x.cwd)) x.promote = true;
   const dismissed = Object.entries(gone).map(([id, v]) => ({ id, ...v, alive: sessions.some(s => s.id === id) })).sort((a, b) => b.at - a.at);
   return { generatedAt: now, realms: cfg.realms, sessions: sessions.filter(s => !gone[s.id]), dismissed, departed };
 }

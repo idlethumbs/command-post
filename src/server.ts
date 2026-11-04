@@ -15,6 +15,7 @@ export interface ServerDeps { uploadsDir?: string; uiDir: string; fontDirs: stri
   dismiss?(sessionId: string): { ok: boolean; message: string } | undefined;
   restore?(sessionId: string): { ok: boolean; message: string } | undefined;
   resume?(sessionId: string, req: { prompt?: string; focus: boolean }): Promise<{ ok: boolean; message: string } | undefined>;
+  found?(req: { name: string; folder?: string; create?: boolean; git?: boolean }): { ok: boolean; message: string; realmId?: string };
   summon?(realmId: string, req: { model: string; land: string; prompt?: string; focus: boolean }): Promise<{ ok: boolean; message: string }> }
 
 export function createArcanumServer(d: ServerDeps) {
@@ -108,6 +109,12 @@ export function createArcanumServer(d: ServerDeps) {
       try { body = await readJson(req); } catch (e) { return send(res, 400, { error: (e as Error).message }); }
       const r = await d.resume?.(re[1], { prompt: typeof body.prompt === "string" ? body.prompt : undefined, focus: body.focus === true });
       return r ? send(res, 200, r) : send(res, 404, { error: "No departed mage with that id." });
+    }
+    if (p === "/api/realms/found" && req.method === "POST") {
+      let body: any;
+      try { body = await readJson(req); } catch (e) { return send(res, 400, { error: (e as Error).message }); }
+      if (!d.found) return send(res, 404, { error: "Founding is off." });
+      return send(res, 200, d.found({ name: String(body.name ?? ""), folder: typeof body.folder === "string" ? body.folder : undefined, create: body.create === true, git: body.git === true }));
     }
     const su = /^\/api\/realms\/([\w-]+)\/summon$/.exec(p);
     if (su && req.method === "POST") {

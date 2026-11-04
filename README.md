@@ -72,9 +72,12 @@ The first time a portal uses AppleScript, macOS asks you to allow your terminal 
 
 ## Realms
 
-- Each git repo becomes a realm the first time a session runs in it. Worktrees join their repo.
-- A repo inside a non-git folder joins that folder's realm (e.g. `orchestration/` + `orchestration/orchestrator`).
-- Sessions in `$HOME`, temp dirs, or a folder holding several repos (like `~/projects`) go to **The Wilds**.
+- **Repos found realms on their own:** each git repo becomes a realm the first time a session runs in it, and worktrees join their repo.
+- **Everything else starts in The Wilds:** plain folders, temp folders, and workspace folders like `~/projects`.
+- **Found a realm** (sidebar) on a new folder under `~/projects`, optionally made a git repo, or on an existing folder. A realm needs a folder, not a repo.
+- **Found a realm here** on a Wilds mage turns its folder into a realm; the mage moves with it.
+- Workspace folders that hold many projects can't be founded as one realm, since they'd swallow every repo inside them.
+- A realm's folder gathers everything beneath it, so `orchestration/orchestrator` joins the Orchestration realm.
 - Use **Edit realm → Absorb another realm** to group repos that belong together.
 
 ## Spellwork and the Grimoire

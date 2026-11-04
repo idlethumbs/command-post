@@ -172,7 +172,8 @@ function renderRealm(entering) {
     <section class="scene" id="scene" aria-label="Mages in ${esc(r.name)}"><div class="troupe" id="troupe"></div></section>
     ${t.length || dep.length ? `<div class="op"><section class="card circle" aria-label="Mages"><span class="lbl">Circle · ${t.length}</span><div id="circle"></div></section>
       <section class="card comms" id="comms" aria-live="polite"></section></div>`
-      : `<section class="card comms"><p>No mages are in this realm right now. It stays on the map so you can find it again.</p></section>`}</div>`;
+      : `<section class="card comms"><p>No mages are in this realm right now. It stays on the map so you can find it again.</p></section>`}
+    ${r.id === "wilds" ? `<p class="via" style="margin:0">The Wilds hold sessions started outside any realm: folders that aren't repos, temp folders, and workspace folders like ~/projects. Select a mage and use <b>Found a realm here</b> to give its folder a realm of its own.</p>` : ""}</div>`;
   $("#back").onclick = goMap;
   const ed = $("#editRealm"); if (ed) ed.onclick = () => { ui.charter = !ui.charter; renderRealm(); };
   const sh = $("#summonHere"); if (sh) sh.onclick = () => summonDialog(r.id);
@@ -339,7 +340,7 @@ function wireComms(s) {
 
 function renderDeparted(d) {
   $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait" style="opacity:.6;filter:grayscale(.6)"></div><div>
-      <h3>${esc(d.name)}<span class="actions"><button class="btn ghost small" data-dismiss="${esc(d.id)}">Dismiss</button></span></h3>
+      <h3>${esc(d.name)}<span class="actions">${d.promote ? `<button class="btn small" data-promote="${esc(d.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(d.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[d.model].title} · ${esc(prettyModel(d.modelId) ?? RANK[d.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ended">DEPARTED</span> ended ${ago(d.endedAt)} ago</dd>
       <dt>FOLDER</dt><dd class="crumb">${esc(home(d.cwd))}${d.branch ? ` · ${esc(d.branch)}` : ""}</dd></dl></div></div>
@@ -373,7 +374,7 @@ function renderDeparted(d) {
 function renderComms(s) {
   const st = STATE[s.state];
   $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
-      <h3>${esc(s.name)}<span class="actions"><button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
+      <h3>${esc(s.name)}<span class="actions">${s.promote ? `<button class="btn small" data-promote="${esc(s.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
       <dt>DWELLS IN</dt><dd>${esc(s.where)}${s.unreachable ? ` <span class="chip rest" title="Its pane or tab couldn't be found">UNREACHABLE</span>` : ""}</dd>
@@ -442,6 +443,11 @@ async function dismissMage(id) {
   const r = await post(`/api/sessions/${encodeURIComponent(id)}/dismiss`, {});
   toast(r.message ?? r.error);
 }
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-promote]"); if (!b) return;
+  const m = data.sessions.find(x => x.id === b.dataset.promote) ?? (data.departed ?? []).find(x => x.id === b.dataset.promote);
+  if (m) foundDialog(m);
+});
 document.addEventListener("click", e => { const b = e.target.closest("[data-dismiss]"); if (b) { e.stopPropagation(); dismissMage(b.dataset.dismiss); } });
 
 const RANK_ORDER = ["haiku", "sonnet", "opus", "fable"];
@@ -478,6 +484,44 @@ async function summonDialog(realmId) {
   const r = await post(`/api/realms/${encodeURIComponent(rid)}/summon`, { model, ...res });
   toast(r.message ?? r.error);
 }
+/* founding: a realm on a new folder, an existing folder, or a Wilds mage's folder */
+const whenRealm = (id, fn, tries = 30) => realmOf(id) ? fn() : tries > 0 ? setTimeout(() => whenRealm(id, fn, tries - 1), 150) : null;
+async function foundDialog(from) {
+  const suggested = from ? from.cwd.split("/").filter(Boolean).pop().replace(/[-_]+/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "";
+  const slug = n => n.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
+  const res = await openModal(`<h3 id="modalTitle">Found a realm</h3>
+    ${from ? `<p>${esc(from.name)}'s folder becomes a realm of its own, and it leaves the Wilds.</p>` : `<p>A realm is a folder Claude works in. It doesn't have to be a git repo.</p>`}
+    <label class="lbl" for="fName">Name</label><input type="text" id="fName" maxlength="60" value="${esc(suggested)}" placeholder="e.g. Q4 Planning" autofocus>
+    <div class="where">
+      ${from ? `<label class="lbl" for="fFolder">Folder</label><input type="text" id="fFolder" value="${esc(home(from.cwd))}" readonly>` : `
+      <label class="check"><input type="radio" name="fWhere" value="new" checked> New folder: <code id="fPreview">~/projects/…</code></label>
+      <label class="check"><input type="radio" name="fWhere" value="existing"> Use an existing folder</label>
+      <input type="text" id="fFolder" placeholder="~/path/to/folder" hidden>`}
+    </div>
+    <label class="check"><input type="checkbox" id="fGit"> Make it a git repo (if it isn't one)</label>
+    ${from ? "" : `<label class="check"><input type="checkbox" id="fSummon" checked> Summon its first mage</label>`}
+    <div class="btns"><button class="btn alt" value="cancel">Cancel</button><button class="btn" value="ok">Found it</button></div>`, {
+    init() {
+      const name = $("#fName"), prev = $("#fPreview"), folder = $("#fFolder");
+      const sync = () => { if (prev) prev.textContent = `~/projects/${slug(name.value) || "…"}`; };
+      name.oninput = sync; sync();
+      document.querySelectorAll('input[name="fWhere"]').forEach(r => r.onchange = () => { folder.hidden = r.value !== "existing" || !r.checked; if (!folder.hidden) folder.focus(); });
+    },
+    collect: () => ({ name: $("#fName").value, create: !from && document.querySelector('input[name="fWhere"]:checked')?.value === "new",
+      folder: from ? from.cwd : $("#fFolder").value, git: $("#fGit").checked, summon: !!$("#fSummon")?.checked }),
+  });
+  if (!res) return;
+  const r = await post("/api/realms/found", res);
+  toast(r.message ?? r.error);
+  if (!r.ok) return;
+  whenRealm(r.realmId, () => {
+    if (from) return openRealm(r.realmId, from.id);
+    travel(r.realmId);
+    if (res.summon) setTimeout(() => summonDialog(r.realmId), 700);
+  });
+}
+$("#navFound").onclick = () => foundDialog(null);
+
 $("#navSummon").onclick = () => summonDialog(ui.view === "realm" ? ui.realm : null);
 
 function renderGrim() {

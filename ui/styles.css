@@ -372,3 +372,9 @@
   .site .pin i.ended { background: #4a4566; color: var(--parch); }
   .circle .sub { margin-top: 8px; }
   .crowwrap.departed .cs { color: #c9c2e8; }
+
+  .modal input[type=text] { width: 100%; background: var(--ink); color: var(--parch); border: 2px solid var(--frame); border-radius: 4px; font-family: var(--f-write); font-size: 16px; padding: 8px 10px; }
+  .modal input[type=text]:focus { outline: none; border-color: var(--gold); }
+  .modal input[readonly] { opacity: .75; }
+  .where { display: grid; gap: 8px; }
+  .where .check code { font-size: 13px; color: var(--gold); }

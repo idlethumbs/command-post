@@ -44,8 +44,8 @@ function freshLandmark(cfg: Config, h: number) {
   return LANDMARKS[h % LANDMARKS.length];
 }
 
-function newRealm(cfg: Config, root: string, now: number): Realm {
-  const h = fnv(root), base = humanize(path.basename(root)) || "Realm";
+function newRealm(cfg: Config, root: string, now: number, name?: string): Realm {
+  const h = fnv(root), base = name || humanize(path.basename(root)) || "Realm";
   let id = path.basename(root).toLowerCase().replace(/[^a-z0-9]+/g, "-") || "realm";
   while (cfg.realms.some(r => r.id === id)) id += "-" + (h % 97);
   const r: Realm = { id, name: base, lands: [root], landmark: freshLandmark(cfg, h), banner: BANNERS[(h >>> 3) % BANNERS.length], pos: place(cfg.realms.map(x => x.pos)), discoveredAt: now };
@@ -66,10 +66,21 @@ export function assignRealms(cwds: string[], cfg: Config, env: RealmEnv, now = D
   for (const { cwd, root } of roots) {
     const hit = realmFor(root, cfg);
     if (hit) out.set(cwd, hit.id);
-    else if (env.gitRoot(cwd) === null && env.isWilds(root)) out.set(cwd, wilds(cfg, now).id);
+    // only repos found realms on their own; plain folders wait in the Wilds until you found one there
+    else if (env.gitRoot(cwd) === null) out.set(cwd, wilds(cfg, now).id);
     else out.set(cwd, newRealm(cfg, root, now).id);
   }
   return out;
+}
+
+/** Found a realm on a folder you chose (repo or not). Workspace folders that hold many projects are refused. */
+export function foundRealm(cfg: Config, q: { name: string; root: string }, env: RealmEnv, now = Date.now()): Realm {
+  const name = q.name.trim();
+  if (!name || name.length > 60) throw new Error("Name must be 1–60 characters.");
+  if (env.isWilds(q.root)) throw new Error(`${q.root} holds many projects (or is a temporary folder), so it can't be one realm. Found it on a subfolder instead.`);
+  const taken = cfg.realms.find(r => r.lands.includes(q.root));
+  if (taken) throw new Error(`That folder is already the realm “${taken.name}”.`);
+  return newRealm(cfg, q.root, now, name);
 }
 
 export function updateRealm(cfg: Config, id: string, patch: Partial<Pick<Realm, "name" | "landmark" | "banner">>) {

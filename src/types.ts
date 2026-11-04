@@ -31,11 +31,11 @@ export interface Session {
   waitingFor?: string; cwd: string; branch?: string;
   jobId?: string; tmux?: string; portal?: "exact" | "app" | "none"; note?: string;
   recent?: Exchange[];
-  status?: string; reply?: "type" | "none"; seal?: boolean; unreachable?: boolean;
+  status?: string; reply?: "type" | "none"; seal?: boolean; unreachable?: boolean; promote?: boolean;
 }
 
 export interface DismissedMage { id: string; name: string; realmId: string; at: number; alive: boolean }
 /** A session whose process has ended but whose conversation can be resumed. */
 export interface DepartedMage { id: string; realmId: string; name: string; title?: string; model: Model; modelId?: string; endedAt: number;
-  cwd: string; branch?: string; briefing: string; lastText?: string; recent?: Exchange[] }
+  cwd: string; branch?: string; briefing: string; lastText?: string; recent?: Exchange[]; promote?: boolean }
 export interface Snapshot { generatedAt: number; realms: Realm[]; sessions: Session[]; dismissed?: DismissedMage[]; departed?: DepartedMage[] }
