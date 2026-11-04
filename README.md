@@ -40,9 +40,11 @@ Arcanum reads the screen before it types, and refuses rather than guessing:
 
 Sending while a session is casting queues your word until it finishes.
 
+Every 5 seconds Arcanum checks that each session's cmux pane or Terminal/iTerm tab still exists. If it can't find one, that mage is marked **unreachable**: its reply box and seal buttons are withdrawn, so you never type into something that won't land. Terminal tabs are matched even when a wrapper (e.g. `kiro-cli-term`) runs Claude in an inner terminal.
+
 ## Summon and dismiss
 
-- **Summon a mage** (in a realm, or from the sidebar) opens a new cmux workspace in one of the realm's folders, running `claude --model haiku|sonnet|opus|fable`, optionally with your first words. The new mage appears in the realm within a second or two.
+- **Summon a mage** (in a realm, or from the sidebar) opens a new cmux workspace in one of the realm's folders, running `claude --model haiku|sonnet|opus|fable`, optionally with your first words. It starts in the background unless you tick **Switch to it in cmux now**, and Arcanum remembers your choice. The new mage appears in the realm within a second or two.
 - **Dismiss** (× on a row, or the Dismiss button) removes a mage from Arcanum for good. **The session isn't closed**: it keeps running in its terminal. Restore it from **Dismissed mages** in the sidebar. The list lives in `~/.arcanum/dismissed.json`.
 
 ## Open portal

@@ -31,7 +31,7 @@ export interface Session {
   waitingFor?: string; cwd: string; branch?: string;
   jobId?: string; tmux?: string; portal?: "exact" | "app" | "none"; note?: string;
   recent?: Exchange[];
-  status?: string; reply?: "type" | "none"; seal?: boolean;
+  status?: string; reply?: "type" | "none"; seal?: boolean; unreachable?: boolean;
 }
 
 export interface DismissedMage { id: string; name: string; realmId: string; at: number; alive: boolean }

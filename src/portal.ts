@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { hostTty } from "./procs";
 import type { ProcTable, Session } from "./types";
 
 /* ---------- cmux layout: which surface (tab) each process lives in ---------- */
@@ -81,7 +82,7 @@ end run`;
 const APP: Partial<Record<Session["host"], string>> = { warp: "Warp", ghostty: "Ghostty" };
 
 export function planPortal(s: Session, ctx: PortalCtx): PortalPlan {
-  const tty = ctx.ps.get(s.pid)?.tty;
+  const tty = hostTty(ctx.ps, s.pid);
   const cm = ctx.cmux;
   switch (s.host) {
     case "cmux": {

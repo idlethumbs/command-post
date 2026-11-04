@@ -39,3 +39,17 @@ export function detectHost(t: ProcTable, pid: number): Host {
   }
   return "unknown";
 }
+
+/**
+ * The tty of the terminal tab itself. Wrappers (e.g. kiro-cli-term) run claude inside an inner pty,
+ * so claude's own tty isn't the tab's. Walk up while the parent still has a tty: the outermost one is the tab.
+ */
+export function hostTty(t: ProcTable, pid: number): string | undefined {
+  let cur = t.get(pid), tty = cur?.tty;
+  for (let i = 0; cur && i < 25; i++) {
+    const parent = t.get(cur.ppid);
+    if (!parent?.tty) break;
+    tty = parent.tty; cur = parent;
+  }
+  return tty;
+}

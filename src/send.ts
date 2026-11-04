@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { cmuxSurfaceFor, type CmuxLayout } from "./portal";
+import { hostTty } from "./procs";
 import type { ProcTable, Session } from "./types";
 
 /* ---------- reading the terminal: is the prompt empty, holding a draft, or showing a permission dialog? ---------- */
@@ -128,7 +129,7 @@ function targetFor(s: Session, ctx: SendCtx): Target | string {
     };
   }
   if (s.host === "terminal" || s.host === "iterm") {
-    const tty = ctx.ps.get(s.pid)?.tty;
+    const tty = hostTty(ctx.ps, s.pid);
     if (!tty) return `Couldn't find its ${s.where} tab.`;
     const wrap = s.host === "iterm" ? ITERM : TERMINAL, it = s.host === "iterm" ? "s" : "t";
     const run = async (body: string, extra: string[] = []) => {
@@ -137,7 +138,8 @@ function targetFor(s: Session, ctx: SendCtx): Target | string {
       return out;
     };
     return {
-      read: async () => ({ text: (await run(`return contents of ${it}`)).split("\n").slice(-80).join("\n") }),
+      // Terminal's `contents` is empty when a wrapper (kiro-cli-term) draws claude in an inner pty; `history` always has the screen
+      read: async () => ({ text: (await run(`return ${s.host === "iterm" ? "contents" : "history"} of ${it}`)).split("\n").slice(-80).join("\n") }),
       type: async text => { await run(s.host === "iterm" ? `tell ${it} to write text (item 2 of argv)\n          return "ok"` : `do script (item 2 of argv) in ${it}\n          return "ok"`, [text]); },
       key: async () => { throw new Error("Not supported"); },
     };
@@ -163,7 +165,9 @@ export async function sendWord(s: Session, raw: string, ctx: SendCtx, images: st
     const shot = await t.read(), screen = parseScreen(shot.solid ?? shot.text);
     if (screen.kind === "permission") return { ok: false, message: `${s.name} just asked for permission. Grant or refuse it first.` };
     if (screen.kind === "unknown") return { ok: false, message: `Couldn't see ${s.name}'s prompt, so nothing was typed. Open the portal instead.` };
-    if (screen.draft) return { ok: false, message: `There's an unsent draft in ${s.name}'s prompt (“${firstLine(screen.draft)}”). Open the portal to finish or clear it.` };
+    if (screen.draft) return { ok: false, message: shot.solid !== undefined
+      ? `There's an unsent draft in ${s.name}'s prompt (“${firstLine(screen.draft)}”). Open the portal to finish or clear it.`
+      : `There's text in ${s.name}'s prompt (“${firstLine(screen.draft)}”). If it's Claude's grey suggestion, press Esc there; otherwise open the portal to finish it.` };
     await t.type(text, images);
     const what = images.length ? `${images.length === 1 ? "An image" : `${images.length} images`}${text ? " and your word" : ""}` : "Your word";
     return { ok: true, message: s.state === "cast" ? `${what} queued for ${s.name}: it will read it when it finishes casting.` : `${what} sent to ${s.name}.` };

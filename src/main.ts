@@ -7,6 +7,7 @@ import { findCmux, planPortal, readCmuxLayout, runPortal } from "./portal";
 import { readPs } from "./procs";
 import { answerSeal, readSeal, sendWord, type SendCtx } from "./send";
 import { pruneUploads } from "./uploads";
+import { appTabTtys, applyReach, checkReach } from "./reach";
 import { dismiss, loadDismissed, restore } from "./dismissed";
 import { planSummon } from "./summon";
 import { loadConfig } from "./realms";
@@ -27,11 +28,13 @@ const live = (id: string) => snapshot.sessions.find(x => x.id === id);
 const sendCtx = async (s: { host: string }): Promise<SendCtx> => ({ ps: readPs(), cmux: cmux && { bin: cmux.bin, layout: s.host === "cmux" ? await readCmuxLayout(cmux.bin) : undefined } });
 
 let snapshot: Snapshot = { generatedAt: Date.now(), realms: [], sessions: [] };
+let reach = new Map<string, boolean>();
 let lastKey = "";
 const rebuild = () => {
   try {
     snapshot = buildSnapshot({ claudeDir: CLAUDE_DIR, arcanumDir: ARCANUM_DIR, ps: readPs(), env: realEnv, hasCmux: !!cmux });
   } catch (e) { console.error("Couldn't read sessions:", (e as Error).message); return; }
+  applyReach(snapshot.sessions, reach);
   const key = JSON.stringify({ ...snapshot, generatedAt: 0 });
   if (key !== lastKey) { lastKey = key; app.broadcast(snapshot); }
   syncTranscriptWatches();
@@ -98,6 +101,16 @@ function syncTranscriptWatches() {
 
 rebuild();
 setInterval(rebuild, 5000); // liveness: processes can die without touching any file
+
+// Reachability: does each session's pane/tab still exist? Withdraw reply boxes for ones that don't.
+let checking = false;
+setInterval(async () => {
+  if (checking) return; checking = true;
+  try {
+    const next = await checkReach(snapshot.sessions, { cmuxBin: cmux?.bin, ps: readPs(), tabTtys: appTabTtys });
+    if (JSON.stringify([...next]) !== JSON.stringify([...reach])) { reach = next; rebuild(); }
+  } finally { checking = false; }
+}, 5000);
 
 app.server.listen(PORT, "127.0.0.1", () => {
   const url = `http://127.0.0.1:${PORT}`;

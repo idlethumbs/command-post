@@ -7,7 +7,7 @@ import { cue, setSound } from "./sound.js";
 const $ = s => document.querySelector(s);
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 /* Grimoire settings (per browser): sound is off unless you turn it on; motion follows macOS unless you choose */
-const prefs = { sound: false, volume: 0.5, motion: "auto" };
+const prefs = { sound: false, volume: 0.5, motion: "auto", summonFocus: false };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem("arcanum.prefs") || "{}")); } catch {}
 const osCalm = matchMedia("(prefers-reduced-motion: reduce)");
 const motionOK = () => prefs.motion === "full" || (prefs.motion === "auto" && !osCalm.matches);
@@ -222,13 +222,18 @@ function exchangeBlock(s) {
       <span class="tx">${e.images ? `<span class="img">[${e.images} image${e.images > 1 ? "s" : ""}]</span>` : ""}${esc(e.text)}</span><span class="at">${ago(e.at)}</span></li>`).join("")}</ul></section>`;
 }
 function sealBlock(s) {
+  if (s.unreachable) return unreachableNote(s);
   if (!s.seal) return `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req">A permission prompt is open in its terminal.</div>
     <div class="btns">${portalButton(s)}<span class="soon-note">${esc(s.where)} can't be sent keys, so answer it there.</span></div></div>`;
   return `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req" id="sealReq">Reading the prompt…</div>
     <div class="btns"><button class="btn" data-seal="grant">Grant seal</button><button class="btn deny" data-seal="refuse">Refuse</button>${portalButton(s)}
     <span class="hint">Presses Yes or No in its prompt</span></div></div>`;
 }
+const unreachableNote = s => `<div class="orders"><span class="lbl">Send word</span>
+    <div class="via">Arcanum can't find ${esc(s.name)}'s ${esc(s.where)} ${s.host === "cmux" ? "pane" : "tab"} right now, so it won't type into it. If the window is still open, reply there; it reconnects here automatically when found.</div>
+    <div class="btns">${portalButton(s)}</div></div>`;
 function wordBlock(s) {
+  if (s.unreachable) return unreachableNote(s);
   if (s.reply !== "type") return `<div class="orders"><span class="lbl">Send word</span>
     <div class="via">${esc(s.where)} can't be typed into from Arcanum. Open it to reply; sessions in cmux, Terminal or iTerm can be answered from here.</div>
     <div class="btns">${portalButton(s)}</div></div>`;
@@ -315,7 +320,7 @@ function renderComms(s) {
       <h3>${esc(s.name)}<span class="actions"><button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
-      <dt>DWELLS IN</dt><dd>${esc(s.where)}</dd>
+      <dt>DWELLS IN</dt><dd>${esc(s.where)}${s.unreachable ? ` <span class="chip rest" title="Its pane or tab couldn't be found">UNREACHABLE</span>` : ""}</dd>
       <dt>FOLDER</dt><dd class="crumb">${esc(home(s.cwd))}${s.branch ? ` · ${esc(s.branch)}` : ""}</dd></dl></div></div>
     ${s.note ? `<div class="via">${esc(s.note)}</div>` : ""}
     ${s.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(s.title)}</b></div>` : ""}
@@ -397,7 +402,7 @@ async function summonDialog(realmId) {
     <div id="sumLandRow"${landsOf(rid).length > 1 ? "" : " hidden"}><label class="lbl" for="sumLand">Folder</label><select id="sumLand">${landOptions(rid)}</select></div>
     <label class="lbl" for="sumPrompt">First words <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
     <textarea id="sumPrompt" placeholder="What should it start on?"></textarea>
-    <label class="check"><input type="checkbox" id="sumFocus" checked> Take me there now</label>
+    <label class="check"><input type="checkbox" id="sumFocus"${prefs.summonFocus ? " checked" : ""}> Switch to it in cmux now <span style="color:var(--muted)">(otherwise it starts in the background)</span></label>
     <div class="btns"><button class="btn alt" value="cancel">Cancel</button><button class="btn" value="ok">Summon</button></div>`, {
     init() {
       const box = $("#sumRanks");
@@ -411,7 +416,7 @@ async function summonDialog(realmId) {
       const rs = $("#sumRealm");
       if (rs) rs.onchange = () => { rid = rs.value; $("#sumLand").innerHTML = landOptions(rid); $("#sumLandRow").hidden = landsOf(rid).length < 2; };
     },
-    collect: () => ({ land: $("#sumLand").value, prompt: $("#sumPrompt").value, focus: $("#sumFocus").checked }),
+    collect: () => { prefs.summonFocus = $("#sumFocus").checked; applyPrefs(); return { land: $("#sumLand").value, prompt: $("#sumPrompt").value, focus: prefs.summonFocus }; },
   });
   if (!res) return;
   const r = await post(`/api/realms/${encodeURIComponent(rid)}/summon`, { model, ...res });
