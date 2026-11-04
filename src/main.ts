@@ -9,7 +9,9 @@ import { answerSeal, readSeal, sendWord, type SendCtx } from "./send";
 import { pruneUploads } from "./uploads";
 import { appTabTtys, applyReach, checkReach } from "./reach";
 import { dismiss, loadDismissed, restore } from "./dismissed";
-import { planSummon } from "./summon";
+import { planResume, planSummon } from "./summon";
+import { readRegistry } from "./registry";
+import { CLAUDE_DIR as CD } from "./paths";
 import { loadConfig } from "./realms";
 import type { Model } from "./types";
 import { realEnv } from "./realms";
@@ -68,9 +70,21 @@ const app = createArcanumServer({ uploadsDir, uiDir: path.join(root, "ui"), font
     return r;
   },
   dismiss(id) {
-    const s = live(id); if (!s) return undefined;
-    dismiss(ARCANUM_DIR, s); schedule();
-    return { ok: true, message: `${s.name} dismissed. It keeps running in ${s.where}; restore it from Dismissed mages.` };
+    const s = live(id), dep = snapshot.departed?.find(x => x.id === id);
+    if (!s && !dep) return undefined;
+    dismiss(ARCANUM_DIR, (s ?? dep)!); schedule();
+    return { ok: true, message: s ? `${s.name} dismissed. It keeps running in ${s.where}; restore it from Dismissed mages.` : `${dep!.name} dismissed. Restore it from Dismissed mages.` };
+  },
+  async resume(id, req) {
+    const dep = snapshot.departed?.find(x => x.id === id); if (!dep) return undefined;
+    // check the registry fresh, not the last snapshot: two processes on one session would fork it
+    const alive = readRegistry(path.join(CD, "sessions"), readPs()).some(e => e.sessionId === id);
+    const plan = planResume(dep, req, cmux, alive);
+    if ("error" in plan) return { ok: false, message: plan.error };
+    const out = await runPortal({ precision: "exact", steps: plan.steps, message: plan.message });
+    console.log(`resume → ${dep.name}: ${out.ok ? "ok" : "failed"} · ${out.message}`);
+    if (out.ok) schedule();
+    return { ok: out.ok, message: out.ok ? `${plan.message} It will come back to life here in a moment.` : out.message };
   },
   restore(id) {
     const d = loadDismissed(ARCANUM_DIR)[id]; if (!d) return undefined;

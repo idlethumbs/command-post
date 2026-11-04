@@ -14,6 +14,7 @@ export interface ServerDeps { uploadsDir?: string; uiDir: string; fontDirs: stri
   readSeal?(sessionId: string): Promise<{ request: string; question: string } | undefined>;
   dismiss?(sessionId: string): { ok: boolean; message: string } | undefined;
   restore?(sessionId: string): { ok: boolean; message: string } | undefined;
+  resume?(sessionId: string, req: { prompt?: string; focus: boolean }): Promise<{ ok: boolean; message: string } | undefined>;
   summon?(realmId: string, req: { model: string; land: string; prompt?: string; focus: boolean }): Promise<{ ok: boolean; message: string }> }
 
 export function createArcanumServer(d: ServerDeps) {
@@ -100,6 +101,13 @@ export function createArcanumServer(d: ServerDeps) {
     if (dm && req.method === "POST") {
       const r = dm[2] === "dismiss" ? d.dismiss?.(dm[1]) : d.restore?.(dm[1]);
       return r ? send(res, 200, r) : send(res, 404, { error: "No mage with that id." });
+    }
+    const re = /^\/api\/departed\/([0-9a-f-]{36})\/resume$/.exec(p);
+    if (re && req.method === "POST") {
+      let body: any;
+      try { body = await readJson(req); } catch (e) { return send(res, 400, { error: (e as Error).message }); }
+      const r = await d.resume?.(re[1], { prompt: typeof body.prompt === "string" ? body.prompt : undefined, focus: body.focus === true });
+      return r ? send(res, 200, r) : send(res, 404, { error: "No departed mage with that id." });
     }
     const su = /^\/api\/realms\/([\w-]+)\/summon$/.exec(p);
     if (su && req.method === "POST") {

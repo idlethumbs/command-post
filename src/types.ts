@@ -12,7 +12,7 @@ export interface RegistryEntry {
 }
 
 export interface TranscriptSummary {
-  model?: string; aiTitle?: string; gitBranch?: string; lastHumanAt?: number;
+  model?: string; aiTitle?: string; gitBranch?: string; lastHumanAt?: number; cwd?: string; entrypoint?: string;
   awaySummary?: { text: string; at: number };
   lastAssistantText?: { text: string; at: number };
   recent?: Exchange[];
@@ -35,4 +35,7 @@ export interface Session {
 }
 
 export interface DismissedMage { id: string; name: string; realmId: string; at: number; alive: boolean }
-export interface Snapshot { generatedAt: number; realms: Realm[]; sessions: Session[]; dismissed?: DismissedMage[] }
+/** A session whose process has ended but whose conversation can be resumed. */
+export interface DepartedMage { id: string; realmId: string; name: string; title?: string; model: Model; modelId?: string; endedAt: number;
+  cwd: string; branch?: string; briefing: string; lastText?: string; recent?: Exchange[] }
+export interface Snapshot { generatedAt: number; realms: Realm[]; sessions: Session[]; dismissed?: DismissedMage[]; departed?: DepartedMage[] }

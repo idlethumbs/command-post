@@ -7,7 +7,7 @@ import { cue, setSound } from "./sound.js";
 const $ = s => document.querySelector(s);
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 /* Grimoire settings (per browser): sound is off unless you turn it on; motion follows macOS unless you choose */
-const prefs = { sound: false, volume: 0.5, motion: "auto", summonFocus: false };
+const prefs = { sound: false, volume: 0.5, motion: "auto", summonFocus: false, showDeparted: true };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem("arcanum.prefs") || "{}")); } catch {}
 const osCalm = matchMedia("(prefers-reduced-motion: reduce)");
 const motionOK = () => prefs.motion === "full" || (prefs.motion === "auto" && !osCalm.matches);
@@ -33,6 +33,7 @@ const isUnread = s => needsYou(s) && seen[s.id] !== s.since;
 
 const realmOf = id => data.realms.find(r => r.id === id);
 const troopsOf = id => data.sessions.filter(s => s.realmId === id);
+const departedOf = id => prefs.showDeparted ? (data.departed ?? []).filter(d => d.realmId === id) : [];
 const byNeed = (a, b) => (needsYou(b) - needsYou(a)) || (b.since - a.since);
 function ago(t) { const d = (Date.now() - t) / 60000; if (d < 1) return "now"; if (d < 60) return `${d | 0}m`; if (d < 1440) return `${(d / 60) | 0}h`; return `${(d / 1440) | 0}d`; }
 const home = p => p.replace(/^\/Users\/[^/]+/, "~");
@@ -110,7 +111,8 @@ function realmsOrdered() {
 }
 function siteContent(r) {
   const ts = troopsOf(r.id), n = k => ts.filter(s => s.state === k).length;
-  const pins = [n("counsel") && `<i class="counsel">!${n("counsel")}</i>`, n("seal") && `<i class="seal">?${n("seal")}</i>`, n("cast") && `<i class="cast">✦${n("cast")}</i>`].filter(Boolean).join("");
+  const gone = departedOf(r.id).length;
+  const pins = [n("counsel") && `<i class="counsel">!${n("counsel")}</i>`, n("seal") && `<i class="seal">?${n("seal")}</i>`, n("cast") && `<i class="cast">✦${n("cast")}</i>`, gone && `<i class="ended" title="Ended, can be resumed">☾${gone}</i>`].filter(Boolean).join("");
   return { pins, needs: ts.some(needsYou), fresh: Date.now() - r.discoveredAt < NEW_FOR, label: `${r.name}: ${ts.length} mages, ${ts.filter(needsYou).length} waiting on you` };
 }
 function renderMap(fromRoute) {
@@ -154,20 +156,21 @@ function renderRealm(entering) {
   const r = realmOf(ui.realm);
   if (!r) return goMap();
   const biome = LANDMARKS[r.landmark]?.biome ?? "meadow", B = BIOME[biome];
-  const t = troopsOf(r.id).sort(byNeed);
-  if (!t.some(s => s.id === ui.session)) ui.session = t[0]?.id ?? null;
-  const cur = t.find(s => s.id === ui.session); if (cur) markSeen(cur);
+  const t = troopsOf(r.id).sort(byNeed), dep = departedOf(r.id);
+  if (!t.some(s => s.id === ui.session) && !dep.some(d => d.id === ui.session)) ui.session = t[0]?.id ?? dep[0]?.id ?? null;
+  const cur = t.find(s => s.id === ui.session), curDep = !cur && dep.find(d => d.id === ui.session);
+  if (cur) markSeen(cur);
   setRoute(false);
   document.documentElement.style.setProperty("--portrait-bg", `linear-gradient(180deg, ${B.sky[0]}, ${B.sky[1]} 62%, ${B.ramp[3]} 62%, ${B.ramp[1]})`);
   $("#view").innerHTML = `<div class="realm${entering ? " in" : ""}">
     <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${tint(r.banner, .15)}">${esc(r.name)}</h2>
-      <span class="meta">${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}</span>
+      <span class="meta">${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}${dep.length ? ` · ${dep.length} departed` : ""}</span>
       <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>R</kbd> reply · <kbd>P</kbd> portal · <kbd>esc</kbd> map</span>
       ${r.lands.length ? `<button class="btn" id="summonHere">✧ Summon a mage</button>` : ""}
       ${r.id === "wilds" ? "" : `<button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button>`}</div></div>
     ${ui.charter ? `<section class="card charter" id="charter"></section>` : ""}
     <section class="scene" id="scene" aria-label="Mages in ${esc(r.name)}"><div class="troupe" id="troupe"></div></section>
-    ${t.length ? `<div class="op"><section class="card circle" aria-label="Mages"><span class="lbl">Circle · ${t.length}</span><div id="circle"></div></section>
+    ${t.length || dep.length ? `<div class="op"><section class="card circle" aria-label="Mages"><span class="lbl">Circle · ${t.length}</span><div id="circle"></div></section>
       <section class="card comms" id="comms" aria-live="polite"></section></div>`
       : `<section class="card comms"><p>No mages are in this realm right now. It stays on the map so you can find it again.</p></section>`}</div>`;
   $("#back").onclick = goMap;
@@ -184,6 +187,14 @@ function renderRealm(entering) {
     b.onclick = () => { ui.session = s.id; renderRealm(); };
     $("#troupe").appendChild(b);
   }
+  for (const d of dep) {
+    const b = document.createElement("button"); b.className = "mage departed" + (d.id === ui.session ? " sel" : ""); b.dataset.session = d.id;
+    b.appendChild(makeMage({ id: d.id, model: d.model, state: "rest" }, 2, `${RANK[d.model].title} ${d.name}: departed`));
+    b.insertAdjacentHTML("afterbegin", `<span class="bubble ended">☾</span>`);
+    b.insertAdjacentHTML("beforeend", `<span class="name">${esc(d.name)}</span>`);
+    b.onclick = () => { ui.session = d.id; renderRealm(); };
+    $("#troupe").appendChild(b);
+  }
   const ci = $("#circle");
   if (ci) for (const s of t) {
     const w = document.createElement("div"); w.className = "crowwrap";
@@ -194,8 +205,20 @@ function renderRealm(entering) {
     w.insertAdjacentHTML("beforeend", `<button class="x" data-dismiss="${esc(s.id)}" aria-label="Dismiss ${esc(s.name)}" title="Dismiss from Arcanum">×</button>`);
     ci.appendChild(w);
   }
+  if (ci && dep.length) {
+    ci.insertAdjacentHTML("beforeend", `<span class="lbl sub">Departed · ${dep.length} <span style="text-transform:none;letter-spacing:0">(last 3 days)</span></span>`);
+    for (const d of dep) {
+      const w = document.createElement("div"); w.className = "crowwrap departed";
+      const b = document.createElement("button"); b.className = "crow" + (d.id === ui.session ? " sel" : ""); b.dataset.session = d.id;
+      b.innerHTML = `<span><span class="cs">${esc(d.name)}</span><span class="rk">${RANK[d.model].title} · ended ${ago(d.endedAt)} ago</span></span><span class="chip ended">ENDED</span>`;
+      b.onclick = () => { ui.session = d.id; renderRealm(); };
+      w.appendChild(b);
+      w.insertAdjacentHTML("beforeend", `<button class="x" data-dismiss="${esc(d.id)}" aria-label="Dismiss ${esc(d.name)}" title="Dismiss from Arcanum">×</button>`);
+      ci.appendChild(w);
+    }
+  }
   if (ui.charter) renderCharter(r);
-  if (cur) renderComms(cur);
+  if (cur) renderComms(cur); else if (curDep) renderDeparted(curDep);
   renderSide();
 }
 function portalButton(s) {
@@ -314,6 +337,39 @@ function wireComms(s) {
   }).catch(() => {});
 }
 
+function renderDeparted(d) {
+  $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait" style="opacity:.6;filter:grayscale(.6)"></div><div>
+      <h3>${esc(d.name)}<span class="actions"><button class="btn ghost small" data-dismiss="${esc(d.id)}">Dismiss</button></span></h3>
+      <dl><dt>RANK</dt><dd>${RANK[d.model].title} · ${esc(prettyModel(d.modelId) ?? RANK[d.model].model)}</dd>
+      <dt>STATE</dt><dd><span class="chip ended">DEPARTED</span> ended ${ago(d.endedAt)} ago</dd>
+      <dt>FOLDER</dt><dd class="crumb">${esc(home(d.cwd))}${d.branch ? ` · ${esc(d.branch)}` : ""}</dd></dl></div></div>
+    ${d.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(d.title)}</b></div>` : ""}
+    <div class="paper brief"><span class="lbl">The matter at hand</span><p>${esc(d.briefing)}</p></div>
+    <div class="paper xmit"><span class="lbl">Its last missive</span>${missive(d.lastText)}</div>
+    ${exchangeBlock(d)}
+    <form class="orders" id="resumeForm"><label class="lbl" for="resumeText">Resume</label>
+      <textarea id="resumeText" rows="2" placeholder="Optional: a word for it as it wakes…"></textarea>
+      <div class="via">Its terminal has closed. Resuming opens a new cmux workspace in <b>${esc(home(d.cwd))}</b> running <code>claude --resume</code>, so it continues this exact conversation${prefs.summonFocus ? "" : " in the background"}.</div>
+      <div class="btns"><button class="btn" type="submit" id="resumeBtn">Resume in cmux</button>
+        <label class="check"><input type="checkbox" id="resumeFocus"${prefs.summonFocus ? " checked" : ""}> Switch to it now</label></div></form>`;
+  $("#portrait").appendChild(makeMage({ id: d.id, model: d.model, state: "rest" }, 2, `${RANK[d.model].title} ${d.name}`));
+  const ex = $("#exlist"); if (ex) { ex.scrollTop = ex.scrollHeight; ex.onclick = e => e.target.closest("li")?.classList.toggle("open"); }
+  const ta = $("#resumeText"), btn = $("#resumeBtn");
+  ta.value = drafts[d.id] ?? "";
+  const label = () => { btn.textContent = ta.value.trim() ? "Resume and send word" : "Resume in cmux"; };
+  ta.oninput = () => { drafts[d.id] = ta.value; label(); }; label();
+  ta.onkeydown = e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); $("#resumeForm").requestSubmit(); } };
+  $("#resumeForm").onsubmit = async e => {
+    e.preventDefault();
+    prefs.summonFocus = $("#resumeFocus").checked; applyPrefs();
+    btn.disabled = true; btn.textContent = "Resuming…";
+    const r = await post(`/api/departed/${encodeURIComponent(d.id)}/resume`, { prompt: ta.value.trim(), focus: prefs.summonFocus });
+    toast(r.message ?? r.error);
+    if (r.ok) { delete drafts[d.id]; burst(document.querySelector(`.mage[data-session="${CSS.escape(d.id)}"] canvas`), "arrive"); cue.travel(); }
+    else { btn.disabled = false; label(); }
+  };
+}
+
 function renderComms(s) {
   const st = STATE[s.state];
   $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
@@ -428,6 +484,7 @@ function renderGrim() {
   const box = $("#grimBox");
   box.innerHTML = `<div class="rowx"><span>Chiptune sounds</span><button class="switch" role="switch" id="gSound" aria-checked="${prefs.sound}" aria-label="Chiptune sounds"></button></div>
     <div class="rowx"${prefs.sound ? "" : " hidden"}><label for="gVol">Volume</label><input type="range" id="gVol" min="0.1" max="1" step="0.1" value="${prefs.volume}"></div>
+    <div class="rowx"><span>Show departed mages</span><button class="switch" role="switch" id="gDeparted" aria-checked="${prefs.showDeparted}" aria-label="Show departed mages"></button></div>
     <div class="rowx"><label for="gMotion">Motion</label><select id="gMotion">
       <option value="auto"${prefs.motion === "auto" ? " selected" : ""}>Follow macOS</option><option value="full"${prefs.motion === "full" ? " selected" : ""}>Full spellwork</option><option value="calm"${prefs.motion === "calm" ? " selected" : ""}>Calm (no motion)</option></select></div>
     <button class="btn ghost small" id="gPreview" type="button">Preview a raven</button>`;
@@ -436,6 +493,7 @@ function renderGrim() {
     const s = here.find(x => x.id === ui.session) ?? here[0];
     s ? playEvents([{ kind: "counsel", s }]) : toast("No mages to preview with.");
   };
+  $("#gDeparted").onclick = () => { prefs.showDeparted = !prefs.showDeparted; applyPrefs(); renderGrim(); ui.view === "map" ? renderMap(true) : renderRealm(); };
   $("#gSound").onclick = () => { prefs.sound = !prefs.sound; applyPrefs(); renderGrim(); if (prefs.sound) cue.test(); };
   const vol = $("#gVol"); if (vol) vol.onchange = () => { prefs.volume = Number(vol.value); applyPrefs(); cue.test(); };
   $("#gMotion").onchange = e => { prefs.motion = e.target.value; applyPrefs(); };
@@ -462,7 +520,7 @@ function setRoute(push) {
 function route() {
   const m = /^#\/realm\/([^/]+)(?:\/([^/]+))?$/.exec(location.hash);
   const rid = m && decodeURIComponent(m[1]), sid = m?.[2] && decodeURIComponent(m[2]);
-  if (rid && realmOf(rid)) openRealm(rid, sid && data.sessions.some(s => s.id === sid) ? sid : undefined, true);
+  if (rid && realmOf(rid)) openRealm(rid, sid && (data.sessions.some(s => s.id === sid) || (data.departed ?? []).some(d => d.id === sid)) ? sid : undefined, true);
   else renderMap(true);
 }
 addEventListener("popstate", route);
@@ -531,10 +589,10 @@ function playEvents(ev) {
 }
 
 function onData(next) {
-  const prevRealms = JSON.stringify(data.realms), prevSessions = JSON.stringify(data.sessions);
+  const prevRealms = JSON.stringify(data.realms), prevSessions = JSON.stringify([data.sessions, data.departed]);
   const ev = eventsFrom(next);
   data = next;
-  const realmsChanged = JSON.stringify(data.realms) !== prevRealms, sessionsChanged = JSON.stringify(data.sessions) !== prevSessions;
+  const realmsChanged = JSON.stringify(data.realms) !== prevRealms, sessionsChanged = JSON.stringify([data.sessions, data.departed]) !== prevSessions;
   renderGone();
   if (!realmsChanged && !sessionsChanged) return;
   if (modal.open) return renderSide();   // don't rebuild the view under an open dialog
@@ -544,7 +602,7 @@ function onData(next) {
     playEvents(ev);
   } else {
     // don't yank the charter out from under someone typing a name
-    if (document.activeElement?.id === "rname") return renderSide();
+    if (document.activeElement?.id === "rname" || document.activeElement?.id === "resumeText") return renderSide();
     const typing = document.activeElement?.id === "reply";
     const sc = $("#view").scrollTop; renderRealm(); $("#view").scrollTop = sc;
     if (typing) { const t = $("#reply"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }

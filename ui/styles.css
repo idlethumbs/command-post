@@ -362,3 +362,13 @@
   .switch[aria-checked="true"] { background: #4a3a10; box-shadow: inset 0 0 0 2px var(--gold); }
   .switch[aria-checked="true"]::after { left: 22px; background: var(--gold); }
   .switch:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* departed: ended sessions that can be resumed */
+  .mage.departed canvas { opacity: .5; filter: grayscale(.65); }
+  .mage.departed .name { opacity: .75; }
+  .bubble.ended { background: transparent; box-shadow: none; color: #c9c2e8; text-shadow: 1px 1px 0 var(--ink); animation: none; }
+  .bubble.ended::after { display: none; }
+  .chip.ended { background: #4a4566; color: var(--parch); }
+  .site .pin i.ended { background: #4a4566; color: var(--parch); }
+  .circle .sub { margin-top: 8px; }
+  .crowwrap.departed .cs { color: #c9c2e8; }

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { classify, modelOf } from "./classify";
 import { loadDismissed } from "./dismissed";
+import { departedModel, departedName, findEnded } from "./departed";
 import { portalPrecision } from "./portal";
 import { replyCapability, sealCapability } from "./send";
 import { detectHost } from "./procs";
@@ -25,13 +26,15 @@ export function briefingOf(t: TranscriptSummary): string {
   return t.aiTitle ?? "No word yet.";
 }
 
-export interface SnapshotDeps { claudeDir: string; arcanumDir: string; ps: ProcTable; env: RealmEnv; now?: number; hasCmux?: boolean }
+export interface SnapshotDeps { claudeDir: string; arcanumDir: string; ps: ProcTable; env: RealmEnv; now?: number; hasCmux?: boolean; withDeparted?: boolean }
 
 export function buildSnapshot(d: SnapshotDeps): Snapshot {
   const now = d.now ?? Date.now();
   const entries = readRegistry(path.join(d.claudeDir, "sessions"), d.ps);
   const cfg = loadConfig(d.arcanumDir), before = JSON.stringify(cfg);
-  const realmOf = assignRealms(entries.map(e => e.cwd), cfg, d.env, now);
+  const gone = loadDismissed(d.arcanumDir);
+  const ended = d.withDeparted === false ? [] : findEnded(d.claudeDir, new Set(entries.map(e => e.sessionId)), now).filter(e => !gone[e.id]);
+  const realmOf = assignRealms([...entries.map(e => e.cwd), ...ended.map(e => e.t.cwd!)], cfg, d.env, now);
   if (JSON.stringify(cfg) !== before) saveConfig(d.arcanumDir, cfg);
 
   const sessions: Session[] = entries.map(e => {
@@ -54,7 +57,11 @@ export function buildSnapshot(d: SnapshotDeps): Snapshot {
     };
   });
   for (const s of sessions) { s.portal = portalPrecision(s, !!d.hasCmux); s.reply = replyCapability(s, !!d.hasCmux); s.seal = sealCapability(s, !!d.hasCmux); }
-  const gone = loadDismissed(d.arcanumDir);
+  const departed = ended.map(e => {
+    const last = e.t.lastAssistantText?.text;
+    return { id: e.id, realmId: realmOf.get(e.t.cwd!)!, name: departedName(e), title: e.t.aiTitle, model: departedModel(e), modelId: e.t.model, endedAt: e.endedAt,
+      cwd: e.t.cwd!, branch: e.t.gitBranch, briefing: briefingOf(e.t), lastText: last && (last.length > 4000 ? "…" + last.slice(-4000) : last), recent: e.t.recent };
+  });
   const dismissed = Object.entries(gone).map(([id, v]) => ({ id, ...v, alive: sessions.some(s => s.id === id) })).sort((a, b) => b.at - a.at);
-  return { generatedAt: now, realms: cfg.realms, sessions: sessions.filter(s => !gone[s.id]), dismissed };
+  return { generatedAt: now, realms: cfg.realms, sessions: sessions.filter(s => !gone[s.id]), dismissed, departed };
 }

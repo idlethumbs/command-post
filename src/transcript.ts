@@ -22,6 +22,8 @@ export function parseTranscript(text: string): TranscriptSummary {
     try { r = JSON.parse(line); } catch { continue; }
     const at = r.timestamp ? Date.parse(r.timestamp) : undefined;
     if (r.gitBranch) s.gitBranch = r.gitBranch;
+    if (typeof r.cwd === "string") s.cwd = r.cwd;
+    if (typeof r.entrypoint === "string") s.entrypoint = r.entrypoint;
     if (r.type === "assistant" && r.message) {
       if (r.message.model) s.model = r.message.model;
       const t = textOf(r.message.content);

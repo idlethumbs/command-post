@@ -47,6 +47,15 @@ Every 5 seconds Arcanum checks that each session's cmux pane or Terminal/iTerm t
 - **Summon a mage** (in a realm, or from the sidebar) opens a new cmux workspace in one of the realm's folders, running `claude --model haiku|sonnet|opus|fable`, optionally with your first words. It starts in the background unless you tick **Switch to it in cmux now**, and Arcanum remembers your choice. The new mage appears in the realm within a second or two.
 - **Dismiss** (× on a row, or the Dismiss button) removes a mage from Arcanum for good. **The session isn't closed**: it keeps running in its terminal. Restore it from **Dismissed mages** in the sidebar. The list lives in `~/.arcanum/dismissed.json`.
 
+## Departed mages and Resume
+
+Sessions whose terminal closed in the last 3 days stay in their realm as faded **departed** mages (☾). Arcanum only shows real conversations: interactive sessions where you typed or that have a title, never headless `claude -p` runs or temp folders. Select one to read its last missive and recent exchange, then:
+
+- **Resume in cmux** opens a new cmux workspace in its folder running `claude --resume <session> --model <its rank>`, which continues the exact conversation.
+- **Resume and send word** does the same, with your message as the first thing it reads.
+
+Resume is refused if that session's process is running again, checked fresh at click time, because two copies would fork the conversation. Hide departed mages in the Grimoire, or Dismiss them one by one.
+
 ## Open portal
 
 **Open portal** (or `P` in a realm) takes you to the live session:

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { dismiss, loadDismissed, restore } from "../src/dismissed";
-import { planSummon, shellQuote } from "../src/summon";
+import { planResume, planSummon, shellQuote } from "../src/summon";
 import type { Realm } from "../src/types";
 
 test("dismissed mages persist until restored", () => {
@@ -39,4 +39,14 @@ test("summon refuses folders outside the realm, missing folders, unknown models 
   expect(planSummon(realm, { model: "gpt" as any, land, focus: true }, cmux)).toEqual({ error: "Pick a rank: Apprentice, Magician, Sorcerer or Archmage." });
   expect(planSummon({ ...realm, lands: [] }, { model: "sonnet", land, focus: true }, cmux)).toMatchObject({ error: expect.stringMatching(/no lands/) });
   expect(planSummon(realm, { model: "sonnet", land, focus: true }, undefined)).toMatchObject({ error: expect.stringMatching(/cmux/) });
+});
+
+test("resume continues an ended conversation in its own folder, with its rank, and never a live one", () => {
+  const d = { id: "11111111-2222-3333-4444-555555555555", cwd: land, model: "opus" as const, name: "agent-rails-1111" };
+  const p = planResume(d, { prompt: "carry on with (b)", focus: false }, cmux, false);
+  if ("error" in p) throw new Error(p.error);
+  expect(p.steps).toEqual([{ cmd: "/bin/cmux", args: ["new-workspace", "--name", "agent-rails-1111 (resumed)", "--cwd", land, "--command", "claude --resume 11111111-2222-3333-4444-555555555555 --model opus 'carry on with (b)'", "--focus", "false"] }]);
+  expect(planResume(d, { focus: false }, cmux, true)).toEqual({ error: "agent-rails-1111 is running again. Open its portal instead." });
+  expect(planResume({ ...d, id: "x; rm -rf ~" }, { focus: false }, cmux, false)).toEqual({ error: "That session can't be resumed." });
+  expect(planResume({ ...d, cwd: "/gone" }, { focus: false }, cmux, false)).toEqual({ error: "Its folder no longer exists." });
 });
