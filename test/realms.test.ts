@@ -74,4 +74,10 @@ test("updates are validated and config round-trips through disk", () => {
   expect(loadConfig(path.join(dir, "missing")).realms).toEqual([]);
 });
 
+test("new realms prefer landmarks nobody has yet", () => {
+  const cfg = emptyConfig();
+  assignRealms(Array.from({ length: 8 }, (_, i) => `/p/q${i}`), cfg, { gitRoot: c => c, isWilds: () => false }, 1);
+  expect(new Set(cfg.realms.map(r => r.landmark)).size).toBe(8);
+});
+
 test("humanize", () => { expect(humanize("genui-module")).toBe("Genui Module"); expect(humanize("prism")).toBe("Prism"); });

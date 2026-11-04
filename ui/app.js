@@ -126,7 +126,7 @@ function renderRealm(entering) {
   $("#view").innerHTML = `<div class="realm${entering ? " in" : ""}">
     <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${tint(r.banner, .15)}">${esc(r.name)}</h2>
       <span class="meta">${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}</span>
-      <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>esc</kbd> map</span>
+      <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>P</kbd> portal · <kbd>esc</kbd> map</span>
       ${r.id === "wilds" ? "" : `<button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button>`}</div></div>
     ${ui.charter ? `<section class="card charter" id="charter"></section>` : ""}
     <section class="scene" id="scene" aria-label="Mages in ${esc(r.name)}"><div class="troupe" id="troupe"></div></section>
@@ -157,6 +157,22 @@ function renderRealm(entering) {
   if (cur) renderComms(cur);
   renderSide();
 }
+function portalButton(s) {
+  if (s.portal === "exact") return `<button class="btn alt" data-portal="${esc(s.id)}" title="Jump to its ${esc(s.where)} ${s.host === "bg" ? "job" : "pane"}">Open portal</button>`;
+  if (s.portal === "app") return `<button class="btn alt" data-portal="${esc(s.id)}" title="${esc(s.where)} can't be told which tab, so this raises the window">Raise ${esc(s.where)}</button>`;
+  return `<button class="btn alt" disabled title="Arcanum can't reach this terminal">No portal</button>`;
+}
+async function openPortal(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Opening…"; }
+  try {
+    const r = await fetch(`/api/sessions/${encodeURIComponent(id)}/portal`, { method: "POST" });
+    const j = await r.json();
+    toast(j.message ?? j.error ?? "That didn't work");
+  } catch { toast("The Arcanum daemon isn't answering."); }
+  finally { if (btn?.isConnected) renderRealm(); }
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-portal]"); if (b) openPortal(b.dataset.portal, b); });
+
 function renderComms(s) {
   const st = STATE[s.state], relay = s.host !== "cmux";
   $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
@@ -165,16 +181,17 @@ function renderComms(s) {
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
       <dt>DWELLS IN</dt><dd>${esc(s.where)}</dd>
       <dt>FOLDER</dt><dd class="crumb">${esc(home(s.cwd))}${s.branch ? ` · ${esc(s.branch)}` : ""}</dd></dl></div></div>
+    ${s.note ? `<div class="via">${esc(s.note)}</div>` : ""}
     ${s.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(s.title)}</b></div>` : ""}
     <div class="paper"><span class="lbl">The matter at hand</span><p>${esc(s.briefing)}</p></div>
     <div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${missive(s.lastText)}</div>
     ${s.state === "seal"
       ? `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req">A permission prompt is open in its terminal.</div>
-         <div class="btns"><button class="btn" disabled>Grant seal</button><button class="btn deny" disabled>Refuse</button><button class="btn alt" disabled>Open portal</button>
-         <span class="soon-note">Approving from here arrives in M3; Open portal in M2.</span></div></div>`
+         <div class="btns"><button class="btn" disabled>Grant seal</button><button class="btn deny" disabled>Refuse</button>${portalButton(s)}
+         <span class="soon-note">Approving from here arrives in M3. Open the portal to answer it now.</span></div></div>`
       : `<div class="orders"><label class="lbl" for="reply">Send word</label>
-         <textarea id="reply" disabled placeholder="Replying from Arcanum arrives in M3. For now, answer in ${esc(s.where)}."></textarea>
-         <div class="btns"><button class="btn" disabled>${relay ? "Send by raven" : "Send word"}</button><button class="btn alt" disabled>Open portal</button>
+         <textarea id="reply" disabled placeholder="Replying from Arcanum arrives in M3. For now, open the portal and answer there."></textarea>
+         <div class="btns"><button class="btn" disabled>${relay ? "Send by raven" : "Send word"}</button>${portalButton(s)}
          <span class="soon-note">${relay ? `Lives outside cmux, so replies will go by raven (relayed).` : `Lives in cmux, so replies will be typed straight into its pane.`}</span></div></div>`}`;
   $("#portrait").appendChild(makeMage(s, 3, `${RANK[s.model].title} ${s.name}`));
 }
@@ -237,6 +254,7 @@ document.addEventListener("keydown", e => {
     if (e.key === "-") map.zoom(1 / 1.35);
   } else if (ui.view === "realm") {
     if (e.key === "Escape") return goMap();
+    if (e.key === "p" || e.key === "P") { const b = document.querySelector("[data-portal]"); if (b) openPortal(b.dataset.portal, b); return; }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault(); const ids = [...document.querySelectorAll(".crow")].map(b => b.dataset.session);
       const i = ids.indexOf(ui.session) + (e.key === "ArrowDown" ? 1 : -1);

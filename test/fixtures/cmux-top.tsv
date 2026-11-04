@@ -1,0 +1,13 @@
+30.8	4343419664	34	total	total		
+30.8	4343419664	34	window	window:1 W-1	total	
+4.2	290113096	1	process	47731	window:1 W-1	cmux
+1.5	2539753464	11	workspace	workspace:1 WS-1	window:1 W-1	✳ Some title
+1.5	2539753464	11	pane	pane:1 P-1	workspace:1 WS-1	
+0.0	0	0	surface	surface:1 S-1	pane:1 P-1	✳ Other tab
+1.5	2539753464	11	surface	surface:2 S-2	pane:1 P-1	✳ Resume
+0.4	16155680	1	process	48590	surface:2 S-2	zsh
+0.0	6013504	1	process	48602	48590	zsh
+25.1	1513553104	22	workspace	workspace:2 WS-2	window:1 W-1	◐ Retro
+25.1	1513553104	22	pane	pane:2 P-2	workspace:2 WS-2	
+25.1	1513553104	22	surface	surface:3 S-3	pane:2 P-2	◐ Retro
+12.2	452757112	1	process	30101	surface:3 S-3	claude.exe

@@ -37,18 +37,25 @@ function realmFor(root: string, cfg: Config): Realm | undefined {
   return best;
 }
 
+/** Prefer a landmark no realm has yet, so realms are easy to tell apart; repeat only once all are taken. */
+function freshLandmark(cfg: Config, h: number) {
+  const used = new Set(cfg.realms.map(r => r.landmark));
+  for (let i = 0; i < LANDMARKS.length; i++) { const l = LANDMARKS[(h + i) % LANDMARKS.length]; if (!used.has(l)) return l; }
+  return LANDMARKS[h % LANDMARKS.length];
+}
+
 function newRealm(cfg: Config, root: string, now: number): Realm {
   const h = fnv(root), base = humanize(path.basename(root)) || "Realm";
   let id = path.basename(root).toLowerCase().replace(/[^a-z0-9]+/g, "-") || "realm";
   while (cfg.realms.some(r => r.id === id)) id += "-" + (h % 97);
-  const r: Realm = { id, name: base, lands: [root], landmark: LANDMARKS[h % LANDMARKS.length], banner: BANNERS[(h >>> 3) % BANNERS.length], pos: place(cfg.realms.map(x => x.pos)), discoveredAt: now };
+  const r: Realm = { id, name: base, lands: [root], landmark: freshLandmark(cfg, h), banner: BANNERS[(h >>> 3) % BANNERS.length], pos: place(cfg.realms.map(x => x.pos)), discoveredAt: now };
   cfg.realms.push(r);
   return r;
 }
 
 function wilds(cfg: Config, now: number): Realm {
   let w = cfg.realms.find(r => r.id === WILDS_ID);
-  if (!w) { w = { id: WILDS_ID, name: "The Wilds", lands: [], landmark: "grove", banner: "#a39bcb", pos: place(cfg.realms.map(x => x.pos)), discoveredAt: now }; cfg.realms.push(w); }
+  if (!w) { w = { id: WILDS_ID, name: "The Wilds", lands: [], landmark: freshLandmark(cfg, 2), banner: "#a39bcb", pos: place(cfg.realms.map(x => x.pos)), discoveredAt: now }; cfg.realms.push(w); }
   return w;
 }
 

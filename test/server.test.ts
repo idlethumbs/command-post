@@ -13,7 +13,7 @@ async function setup() {
   assignRealms(["/p/a", "/p/b"], cfg, { gitRoot: c => c, isWilds: () => false }, 1);
   saveConfig(arcanumDir, cfg);
   let changes = 0;
-  const app = createArcanumServer({ uiDir: ui, fontDirs: [], arcanumDir, getSnapshot: () => ({ generatedAt: 1, realms: loadConfig(arcanumDir).realms, sessions: [] }), onConfigChange: () => changes++ });
+  const app = createArcanumServer({ uiDir: ui, fontDirs: [], arcanumDir, openPortal: async (id: string) => id === "abc" ? { ok: true, precision: "exact" as const, message: "Opened." } : undefined, getSnapshot: () => ({ generatedAt: 1, realms: loadConfig(arcanumDir).realms, sessions: [] }), onConfigChange: () => changes++ });
   await new Promise<void>(r => app.server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
   return { app, base, arcanumDir, changes: () => changes };
@@ -38,6 +38,10 @@ test("serves the page, the state and realm edits", async () => {
     expect(merge.status).toBe(200);
     expect(loadConfig(s.arcanumDir).realms.map(r => r.id)).toEqual(["a"]);
     expect(s.changes()).toBe(2);
+
+    const portal = await fetch(s.base + "/api/sessions/abc/portal", { method: "POST" });
+    expect(await portal.json()).toEqual({ ok: true, precision: "exact", message: "Opened." });
+    expect((await fetch(s.base + "/api/sessions/zzz/portal", { method: "POST" })).status).toBe(404);
   } finally { s.app.close(); }
 });
 

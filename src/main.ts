@@ -3,6 +3,7 @@ import { watch, type FSWatcher } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ARCANUM_DIR, CLAUDE_DIR, PORT } from "./paths";
+import { findCmux, planPortal, readCmuxLayout, runPortal } from "./portal";
 import { readPs } from "./procs";
 import { realEnv } from "./realms";
 import { createArcanumServer } from "./server";
@@ -13,11 +14,13 @@ import type { Snapshot } from "./types";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fontDirs = ["pixelify-sans", "jacquard-24"].map(f => path.join(root, "node_modules", "@fontsource", f, "files"));
 
+const cmux = findCmux();
+
 let snapshot: Snapshot = { generatedAt: Date.now(), realms: [], sessions: [] };
 let lastKey = "";
 const rebuild = () => {
   try {
-    snapshot = buildSnapshot({ claudeDir: CLAUDE_DIR, arcanumDir: ARCANUM_DIR, ps: readPs(), env: realEnv });
+    snapshot = buildSnapshot({ claudeDir: CLAUDE_DIR, arcanumDir: ARCANUM_DIR, ps: readPs(), env: realEnv, hasCmux: !!cmux });
   } catch (e) { console.error("Couldn't read sessions:", (e as Error).message); return; }
   const key = JSON.stringify({ ...snapshot, generatedAt: 0 });
   if (key !== lastKey) { lastKey = key; app.broadcast(snapshot); }
@@ -27,7 +30,17 @@ const rebuild = () => {
 let timer: NodeJS.Timeout | undefined;
 const schedule = () => { clearTimeout(timer); timer = setTimeout(rebuild, 250); };
 
-const app = createArcanumServer({ uiDir: path.join(root, "ui"), fontDirs, arcanumDir: ARCANUM_DIR, getSnapshot: () => snapshot, onConfigChange: schedule });
+const app = createArcanumServer({ uiDir: path.join(root, "ui"), fontDirs, arcanumDir: ARCANUM_DIR, getSnapshot: () => snapshot, onConfigChange: schedule,
+  // Read the process table and cmux layout at click time: panes move, tabs close.
+  async openPortal(id) {
+    const s = snapshot.sessions.find(x => x.id === id);
+    if (!s) return undefined;
+    const layout = cmux && s.host === "cmux" ? await readCmuxLayout(cmux.bin) : undefined;
+    const result = await runPortal(planPortal(s, { ps: readPs(), cmux: cmux && { ...cmux, layout } }));
+    console.log(`portal → ${s.name} (${s.where}): ${result.ok ? "ok" : "failed"} · ${result.message}`);
+    return result;
+  },
+});
 
 // Watch the live registry, and the transcript of every live session (re-armed after each scan).
 const watchers = new Map<string, FSWatcher>();

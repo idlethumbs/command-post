@@ -19,9 +19,24 @@ Drag to pan, scroll or pinch to zoom, `0` to fit all realms, `←`/`→` + `⏎`
 |---|---|
 | Reads | `~/.claude/sessions/*.json` (live session registry), the tail of each live session's transcript under `~/.claude/projects/`, `ps` (to check that sessions are alive and which terminal hosts them), `git rev-parse` (to group folders into realms) |
 | Writes | `~/.arcanum/realms.json` only: discovered realms and your charter edits (names, landmarks, banners, merges). Safe to edit by hand or delete. |
+| Runs | Only when you click Open portal: `cmux`, `osascript`, `tmux` or `open`, with arguments taken from `ps` and cmux, never through a shell |
 | Never | Claude Code settings, hooks or transcripts |
 
-M1 is read-only. Replying (M3) and Open portal (M2) appear but are disabled.
+Replying (M3) appears but is disabled.
+
+## Open portal
+
+**Open portal** (or `P` in a realm) takes you to the live session:
+
+| Where it runs | What happens |
+|---|---|
+| cmux | Focuses the exact pane and flashes it (uses the `cmux` CLI inside `cmux.app`) |
+| Terminal.app / iTerm | Selects the exact tab by its tty (AppleScript) |
+| tmux | Selects the recorded window and pane |
+| Background (`claude --bg`) | Opens `claude attach <job>` in a new cmux workspace |
+| Warp / Ghostty / VS Code | Raises the app window only; they can't be told which tab |
+
+The first time a portal uses AppleScript, macOS asks you to allow your terminal to control Terminal or iTerm. If you said no, re-enable it in System Settings → Privacy & Security → Automation.
 
 ## Realms
 

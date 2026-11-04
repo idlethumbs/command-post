@@ -1,14 +1,16 @@
 import { execFileSync } from "node:child_process";
 import type { Host, ProcTable } from "./types";
 
-const ROW = /^\s*(\d+)\s+(\d+)\s+(\w{3} \w{3}\s+\d{1,2} \d\d:\d\d:\d\d \d{4})\s+(.*)$/;
+const ROW = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(\w{3} \w{3}\s+\d{1,2} \d\d:\d\d:\d\d \d{4})\s+(.*)$/;
 export const normStart = (s: string) => s.replace(/\s+/g, " ").trim();
 
 export function parsePs(out: string): ProcTable {
   const t: ProcTable = new Map();
   for (const line of out.split("\n")) {
     const m = ROW.exec(line);
-    if (m) t.set(Number(m[1]), { ppid: Number(m[2]), lstart: normStart(m[3]), comm: m[4].trim() });
+    if (!m) continue;
+    const tty = /^ttys?\d+$/.test(m[3]) ? m[3] : undefined;
+    t.set(Number(m[1]), { ppid: Number(m[2]), ...(tty ? { tty } : {}), lstart: normStart(m[4]), comm: m[5].trim() });
   }
   return t;
 }
@@ -16,7 +18,7 @@ export function parsePs(out: string): ProcTable {
 /** One ps call per scan: liveness (pid + start time) and parent chains for host detection. */
 export function readPs(): ProcTable {
   try {
-    return parsePs(execFileSync("ps", ["-axo", "pid=,ppid=,lstart=,comm="], { env: { ...process.env, LC_ALL: "C" }, encoding: "utf8", maxBuffer: 16 << 20 }));
+    return parsePs(execFileSync("ps", ["-axo", "pid=,ppid=,tty=,lstart=,comm="], { env: { ...process.env, LC_ALL: "C" }, encoding: "utf8", maxBuffer: 16 << 20 }));
   } catch {
     return new Map();
   }
