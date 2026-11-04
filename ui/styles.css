@@ -182,10 +182,10 @@
   .realm-top h2 { font-family: var(--f-display); font-weight: 400; font-size: 46px; line-height: 1; margin: 0; text-shadow: 2px 2px 0 var(--ink); }
   .realm-top .meta { font-size: 14px; color: var(--muted); }
   .realm-top .right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .scene { position: relative; height: 200px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
-  .scene > canvas.backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .scene .landmark { position: absolute; left: 14px; bottom: 16px; }
-  .troupe { position: absolute; left: 160px; right: 12px; bottom: 4px; display: flex; gap: 6px; align-items: flex-end; overflow-x: auto; padding-top: 30px; }
+  .scene { position: relative; height: 146px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
+  .scene > canvas.backdrop { position: absolute; left: 0; bottom: 0; width: 100%; height: 200px; }
+  .scene .landmark { position: absolute; left: 14px; bottom: 8px; }
+  .troupe { position: absolute; left: 160px; right: 12px; bottom: 4px; display: flex; gap: 6px; align-items: flex-end; overflow-x: auto; overflow-y: hidden; padding-top: 16px; }
   @media (max-width: 640px) { .scene .landmark { display: none; } .troupe { left: 8px; } }
   .mage { all: unset; box-sizing: border-box; cursor: pointer; position: relative; display: grid; justify-items: center; flex: none; }
   .mage .name { font-size: 12px; font-weight: 600; background: rgba(15,12,30,.85); padding: 1px 7px; border-radius: 3px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: -6px; }
@@ -203,7 +203,7 @@
   @keyframes bbob { 50% { translate: -50% -4px; } }
   @keyframes drift { 0% { translate: -20% 4px; opacity: 0; } 50% { opacity: 1; } 100% { translate: 20% -10px; opacity: 0; } }
 
-  .op { display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .op { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 14px; align-items: start; }
   @media (max-width: 1100px) { .op { grid-template-columns: 1fr; } }
   .card { background: var(--panel); border-radius: 6px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
   .circle { padding: 12px; display: grid; gap: 4px; }
@@ -294,3 +294,47 @@
   .paper code { font-size: 14px; }
   .orders textarea, .scry input, .charter input[type=text] { font-family: var(--f-write); font-size: 17px; line-height: 1.45; }
   .raven .msg { font-family: var(--f-write); font-size: 15px; line-height: 1.35; }
+
+  /* recent exchange: your words and the mage's replies, dark so it reads as history, not the current missive */
+  .exchange { background: #120f24; border-radius: 4px; box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--frame); padding: 10px 12px; }
+  .exchange .lbl { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .exlist { list-style: none; margin: 0; padding: 0 4px 0 0; display: grid; gap: 6px; max-height: 220px; overflow-y: auto; font-family: var(--f-write); font-size: 15px; line-height: 1.4; }
+  .exlist li { display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; align-items: baseline; padding: 5px 8px; border-radius: 3px; }
+  .exlist li.you { background: rgba(116,224,247,.08); box-shadow: inset 2px 0 0 var(--cast); }
+  .exlist li.mage { background: rgba(240,228,196,.05); box-shadow: inset 2px 0 0 #8a6a3a; }
+  .exlist .who { font-family: var(--f-ui); font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .exlist li.you .who { color: var(--cast); }
+  .exlist .tx { color: #ddd4bc; white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-variant-numeric: lining-nums; }
+  .exlist li.open .tx { display: block; -webkit-line-clamp: unset; }
+  .exlist .tx { cursor: pointer; }
+  .exlist .at { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .exlist .img { font-family: var(--f-ui); font-size: 11px; color: var(--gold); margin-right: 6px; }
+
+  /* dismiss + summon */
+  .crowwrap { position: relative; }
+  .crowwrap .crow { width: 100%; padding-right: 26px; }
+  .crowwrap .x { all: unset; box-sizing: border-box; cursor: pointer; position: absolute; right: 4px; top: 4px; width: 20px; height: 20px; border-radius: 3px; text-align: center; line-height: 20px; font-size: 13px; color: var(--muted); opacity: 0; }
+  .crowwrap:hover .x, .crowwrap:focus-within .x { opacity: 1; }
+  .crowwrap .x { top: 50%; translate: 0 -50%; }
+  .crowwrap .x:hover, .crowwrap .x:focus-visible { background: var(--counsel); color: #fff; outline: none; }
+  dialog.modal { border: 0; padding: 0; background: var(--panel); color: var(--parch); border-radius: 6px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame), 0 20px 60px rgba(0,0,0,.6); width: min(520px, calc(100% - 32px)); }
+  dialog.modal::backdrop { background: rgba(10,8,20,.65); }
+  .modal form { padding: 18px 20px; display: grid; gap: 14px; }
+  .modal h3 { font-family: var(--f-display); font-weight: 400; font-size: 32px; line-height: 1; margin: 0; color: var(--gold); }
+  .modal p { margin: 0; font-family: var(--f-write); font-size: 16px; line-height: 1.45; color: #ddd4bc; }
+  .modal .btns { justify-content: flex-end; }
+  .ranks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .rank { all: unset; box-sizing: border-box; cursor: pointer; display: grid; justify-items: center; gap: 2px; padding: 6px 4px 8px; border-radius: 4px; background: var(--ink); border: 2px solid var(--frame); font-size: 12px; text-align: center; }
+  .rank small { color: var(--muted); font-size: 11px; }
+  .rank[aria-checked="true"], .rank:focus-visible { border-color: var(--gold); outline: none; }
+  .modal select, .modal textarea { width: 100%; background: var(--ink); color: var(--parch); border: 2px solid var(--frame); border-radius: 4px; font-family: var(--f-write); font-size: 16px; padding: 8px 10px; }
+  .modal textarea { min-height: 70px; resize: vertical; }
+  .modal select:focus, .modal textarea:focus { outline: none; border-color: var(--gold); }
+  .check { display: flex; gap: 8px; align-items: center; font-family: var(--f-write); font-size: 15px; }
+  .gone { display: grid; gap: 4px; }
+  .gone li { list-style: none; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 6px 9px; border-radius: 4px; background: rgba(15,12,30,.35); font-size: 14px; }
+  .gone small { color: var(--muted); display: block; font-family: var(--f-write); }
+  .gone ul { margin: 0; padding: 0; display: grid; gap: 4px; }
+  .dossier .actions { display: flex; gap: 8px; margin-left: auto; }
+  .btn.small { font-size: 12px; padding: 5px 9px; }
+  .dossier h3 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }

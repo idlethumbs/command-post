@@ -1,6 +1,9 @@
 import { closeSync, existsSync, fstatSync, openSync, readdirSync, readSync } from "node:fs";
 import path from "node:path";
-import type { TranscriptSummary } from "./types";
+import type { Exchange, TranscriptSummary } from "./types";
+
+const RECENT = 12, CLIP = 1500;
+const clip = (t: string) => t.length > CLIP ? t.slice(0, CLIP) + "…" : t;
 
 const textOf = (content: unknown): string | undefined => {
   if (!Array.isArray(content)) return undefined;
@@ -12,6 +15,7 @@ const textOf = (content: unknown): string | undefined => {
 export function parseTranscript(text: string): TranscriptSummary {
   const s: TranscriptSummary = {};
   let lastTextMsgId: string | undefined;
+  const recent: Exchange[] = [];
   for (const line of text.split("\n")) {
     if (!line.trim()) continue;
     let r: any;
@@ -23,18 +27,29 @@ export function parseTranscript(text: string): TranscriptSummary {
       const t = textOf(r.message.content);
       if (t) {
         const prev = s.lastAssistantText;
-        s.lastAssistantText = { text: prev && lastTextMsgId === r.message.id ? `${prev.text}\n\n${t}` : t, at: at ?? prev?.at ?? 0 };
+        const same = prev && lastTextMsgId === r.message.id;
+        s.lastAssistantText = { text: same ? `${prev!.text}\n\n${t}` : t, at: at ?? prev?.at ?? 0 };
+        const last = recent.at(-1);
+        if (same && last?.who === "mage") last.text = clip(s.lastAssistantText.text);
+        else recent.push({ who: "mage", text: clip(t), at: at ?? 0 });
         lastTextMsgId = r.message.id;
       }
     } else if (r.type === "user" && r.message) {
       const human = r.origin?.kind === "human" || (!r.origin && !r.isMeta && typeof r.message.content === "string");
-      if (human && at) s.lastHumanAt = at;
+      if (human && at) {
+        s.lastHumanAt = at;
+        const c = r.message.content;
+        const text = typeof c === "string" ? c : textOf(c) ?? "";
+        const images = Array.isArray(c) ? c.filter((b: any) => b?.type === "image").length : 0;
+        if (text.trim() || images) recent.push({ who: "you", text: clip(text.replace(/\[Image #\d+\]\s*/g, "").trim()), at, ...(images ? { images } : {}) });
+      }
     } else if (r.type === "ai-title" && r.aiTitle) {
       s.aiTitle = r.aiTitle;
     } else if (r.type === "system" && r.subtype === "away_summary" && typeof r.content === "string") {
       s.awaySummary = { text: r.content, at: at ?? 0 };
     }
   }
+  if (recent.length) s.recent = recent.slice(-RECENT);
   return s;
 }
 

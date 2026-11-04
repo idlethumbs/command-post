@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync } from 
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { buildSnapshot, briefingOf } from "../src/snapshot";
+import { dismiss } from "../src/dismissed";
 import type { ProcTable } from "../src/types";
 
 function world() {
@@ -50,6 +51,14 @@ test("a parked session rests and points at the background job doing its work", (
   expect(parked.state).toBe("rest");
   expect(parked.note).toBe("Handed its work to the background mage “Tutorial work”.");
   expect(bg).toMatchObject({ host: "bg", state: "cast", portal: "none" });
+});
+
+test("dismissed mages leave the live list but stay restorable", () => {
+  const w = world();
+  dismiss(w.arcanum, { id: "abc", name: "agent-rails-e4", realmId: "agent-rails" }, 9);
+  const snap = buildSnapshot({ claudeDir: w.claude, arcanumDir: w.arcanum, ps: w.ps, env: w.env, now: 10 });
+  expect(snap.sessions).toEqual([]);
+  expect(snap.dismissed).toEqual([{ id: "abc", name: "agent-rails-e4", realmId: "agent-rails", at: 9, alive: true }]);
 });
 
 test("briefing prefers a fresh away summary, then the opening of the last reply", () => {

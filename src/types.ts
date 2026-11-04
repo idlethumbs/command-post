@@ -15,7 +15,10 @@ export interface TranscriptSummary {
   model?: string; aiTitle?: string; gitBranch?: string; lastHumanAt?: number;
   awaySummary?: { text: string; at: number };
   lastAssistantText?: { text: string; at: number };
+  recent?: Exchange[];
 }
+/** One message in the conversation, as you'd see it: your words or the mage's reply (tool chatter left out). */
+export interface Exchange { who: "you" | "mage"; text: string; at: number; images?: number }
 
 export interface Realm {
   id: string; name: string; lands: string[]; landmark: string; banner: string;
@@ -27,7 +30,9 @@ export interface Session {
   state: MageState; since: number; host: Host; where: string; briefing: string; lastText?: string;
   waitingFor?: string; cwd: string; branch?: string;
   jobId?: string; tmux?: string; portal?: "exact" | "app" | "none"; note?: string;
+  recent?: Exchange[];
   status?: string; reply?: "type" | "none"; seal?: boolean;
 }
 
-export interface Snapshot { generatedAt: number; realms: Realm[]; sessions: Session[] }
+export interface DismissedMage { id: string; name: string; realmId: string; at: number; alive: boolean }
+export interface Snapshot { generatedAt: number; realms: Realm[]; sessions: Session[]; dismissed?: DismissedMage[] }

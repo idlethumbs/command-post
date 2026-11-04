@@ -7,6 +7,10 @@ import { findCmux, planPortal, readCmuxLayout, runPortal } from "./portal";
 import { readPs } from "./procs";
 import { answerSeal, readSeal, sendWord, type SendCtx } from "./send";
 import { pruneUploads } from "./uploads";
+import { dismiss, loadDismissed, restore } from "./dismissed";
+import { planSummon } from "./summon";
+import { loadConfig } from "./realms";
+import type { Model } from "./types";
 import { realEnv } from "./realms";
 import { createArcanumServer } from "./server";
 import { buildSnapshot } from "./snapshot";
@@ -59,6 +63,25 @@ const app = createArcanumServer({ uploadsDir, uiDir: path.join(root, "ui"), font
     console.log(`seal → ${s.name}: ${decision} · ${r.ok ? "ok" : "refused"} · ${r.message}`);
     if (r.ok) schedule();
     return r;
+  },
+  dismiss(id) {
+    const s = live(id); if (!s) return undefined;
+    dismiss(ARCANUM_DIR, s); schedule();
+    return { ok: true, message: `${s.name} dismissed. It keeps running in ${s.where}; restore it from Dismissed mages.` };
+  },
+  restore(id) {
+    const d = loadDismissed(ARCANUM_DIR)[id]; if (!d) return undefined;
+    restore(ARCANUM_DIR, id); schedule();
+    return { ok: true, message: `${d.name} is back.` };
+  },
+  async summon(realmId, req) {
+    const r = loadConfig(ARCANUM_DIR).realms.find(x => x.id === realmId);
+    if (!r) return { ok: false, message: "No realm by that name." };
+    const plan = planSummon(r, { ...req, model: req.model as Model }, cmux);
+    if ("error" in plan) return { ok: false, message: plan.error };
+    const out = await runPortal({ precision: "exact", steps: plan.steps, message: plan.message });
+    console.log(`summon → ${r.name} (${req.model}): ${out.ok ? "ok" : "failed"} · ${out.message}`);
+    return { ok: out.ok, message: out.ok ? `${plan.message} It will appear here in a moment.` : out.message };
   },
   async readSeal(id) { const s = live(id); return s ? readSeal(s, await sendCtx(s)) : undefined; },
 });

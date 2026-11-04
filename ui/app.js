@@ -74,7 +74,7 @@ function renderSide() {
       <span class="t"><span class="g ${st.cls}">${st.glyph}</span>${ago(s.since)}</span>
       <span class="msg">${esc(s.briefing)}</span></button></li>`;
   }).join("") || `<li class="via" style="padding:8px">No ravens. No Claude sessions are running.</li>`;
-  scry();
+  scry(); renderGone();
 }
 document.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => {
   ui.filter = b.dataset.filter; document.querySelectorAll("[data-filter]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); renderSide();
@@ -141,6 +141,7 @@ function renderRealm(entering) {
     <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${tint(r.banner, .15)}">${esc(r.name)}</h2>
       <span class="meta">${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}</span>
       <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>R</kbd> reply · <kbd>P</kbd> portal · <kbd>esc</kbd> map</span>
+      ${r.lands.length ? `<button class="btn" id="summonHere">✧ Summon a mage</button>` : ""}
       ${r.id === "wilds" ? "" : `<button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button>`}</div></div>
     ${ui.charter ? `<section class="card charter" id="charter"></section>` : ""}
     <section class="scene" id="scene" aria-label="Mages in ${esc(r.name)}"><div class="troupe" id="troupe"></div></section>
@@ -149,6 +150,7 @@ function renderRealm(entering) {
       : `<section class="card comms"><p>No mages are in this realm right now. It stays on the map so you can find it again.</p></section>`}</div>`;
   $("#back").onclick = goMap;
   const ed = $("#editRealm"); if (ed) ed.onclick = () => { ui.charter = !ui.charter; renderRealm(); };
+  const sh = $("#summonHere"); if (sh) sh.onclick = () => summonDialog(r.id);
   const sc = $("#scene"), bd = buildBackdrop(Math.max(40, Math.round(sc.clientWidth / 3)), 100, biome);
   bd.className = "backdrop"; bd.setAttribute("aria-hidden", "true"); sc.prepend(bd);
   const lm = makeLandmark(r.landmark, r.banner, 2, 2); lm.className = "landmark"; sc.insertBefore(lm, $("#troupe"));
@@ -162,10 +164,13 @@ function renderRealm(entering) {
   }
   const ci = $("#circle");
   if (ci) for (const s of t) {
+    const w = document.createElement("div"); w.className = "crowwrap";
     const b = document.createElement("button"); b.className = "crow" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
     b.innerHTML = `<span><span class="cs">${esc(s.name)}</span><span class="rk">${RANK[s.model].title} · ${ago(s.since)}</span></span><span class="chip ${STATE[s.state].cls}">${STATE[s.state].chip}</span>`;
     b.onclick = () => { ui.session = s.id; renderRealm(); };
-    ci.appendChild(b);
+    w.appendChild(b);
+    w.insertAdjacentHTML("beforeend", `<button class="x" data-dismiss="${esc(s.id)}" aria-label="Dismiss ${esc(s.name)}" title="Dismiss from Arcanum">×</button>`);
+    ci.appendChild(w);
   }
   if (ui.charter) renderCharter(r);
   if (cur) renderComms(cur);
@@ -187,6 +192,13 @@ async function openPortal(id, btn) {
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-portal]"); if (b) openPortal(b.dataset.portal, b); });
 
+function exchangeBlock(s) {
+  const r = s.recent ?? [];
+  if (!r.length) return "";
+  return `<section class="exchange" aria-label="Recent exchange"><div class="lbl"><span>Recent exchange</span><span>newest last · click to expand</span></div>
+    <ul class="exlist" id="exlist">${r.map(e => `<li class="${e.who}"><span class="who">${e.who === "you" ? "You" : "Mage"}</span>
+      <span class="tx">${e.images ? `<span class="img">[${e.images} image${e.images > 1 ? "s" : ""}]</span>` : ""}${esc(e.text)}</span><span class="at">${ago(e.at)}</span></li>`).join("")}</ul></section>`;
+}
 function sealBlock(s) {
   if (!s.seal) return `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req">A permission prompt is open in its terminal.</div>
     <div class="btns">${portalButton(s)}<span class="soon-note">${esc(s.where)} can't be sent keys, so answer it there.</span></div></div>`;
@@ -233,6 +245,8 @@ async function post(url, body) {
   catch { return { ok: false, message: "The Arcanum daemon isn't answering." }; }
 }
 function wireComms(s) {
+  const ex = $("#exlist");
+  if (ex) { ex.scrollTop = ex.scrollHeight; ex.onclick = e => e.target.closest("li")?.classList.toggle("open"); }
   const f = $("#orders");
   if (f) {
     const ta = $("#reply");
@@ -274,7 +288,7 @@ function wireComms(s) {
 function renderComms(s) {
   const st = STATE[s.state];
   $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
-      <h3>${esc(s.name)}</h3>
+      <h3>${esc(s.name)}<span class="actions"><button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
       <dt>DWELLS IN</dt><dd>${esc(s.where)}</dd>
@@ -283,6 +297,7 @@ function renderComms(s) {
     ${s.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(s.title)}</b></div>` : ""}
     <div class="paper brief"><span class="lbl">The matter at hand</span><p>${esc(s.briefing)}</p></div>
     <div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${missive(s.lastText)}</div>
+    ${exchangeBlock(s)}
     ${s.state === "seal" ? sealBlock(s) : wordBlock(s)}`;
   $("#portrait").appendChild(makeMage(s, 1, `${RANK[s.model].title} ${s.name}`));
   wireComms(s);
@@ -321,6 +336,76 @@ function renderCharter(r) {
     if (await edit(`/api/realms/${r.id}/absorb`, "POST", { other: o.id })) toast(`${o.name} absorbed into ${r.name}`);
   };
 }
+
+/* ---------------- dialogs ---------------- */
+const modal = $("#modal"), modalForm = $("#modalForm");
+function openModal(html, wire) {
+  modalForm.innerHTML = html;
+  return new Promise(done => {
+    modal.onclose = () => done(modal.returnValue === "ok" ? (wire?.collect?.() ?? true) : null);
+    wire?.init?.();
+    modal.showModal();
+  });
+}
+async function dismissMage(id) {
+  const s = data.sessions.find(x => x.id === id); if (!s) return;
+  const ok = await openModal(`<h3 id="modalTitle">Dismiss ${esc(s.name)}?</h3>
+    <p>It leaves Arcanum's map, realm and ravens for good. <b>The session itself is not closed</b>: it keeps running in ${esc(s.where)}.</p>
+    <p>Changed your mind later? Restore it from <b>Dismissed mages</b> in the sidebar.</p>
+    <div class="btns"><button class="btn alt" value="cancel">Keep it</button><button class="btn deny" value="ok" autofocus>Dismiss</button></div>`);
+  if (!ok) return;
+  const r = await post(`/api/sessions/${encodeURIComponent(id)}/dismiss`, {});
+  toast(r.message ?? r.error);
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-dismiss]"); if (b) { e.stopPropagation(); dismissMage(b.dataset.dismiss); } });
+
+const RANK_ORDER = ["haiku", "sonnet", "opus", "fable"];
+async function summonDialog(realmId) {
+  const realms = data.realms.filter(r => r.lands.length);
+  if (!realms.length) return toast("No realm has a folder to summon into yet.");
+  let rid = realms.some(r => r.id === realmId) ? realmId : realms[0].id, model = "sonnet";
+  const landsOf = id => realms.find(r => r.id === id)?.lands ?? [];
+  const landOptions = id => landsOf(id).map(l => `<option value="${esc(l)}">${esc(home(l))}</option>`).join("");
+  const res = await openModal(`<h3 id="modalTitle">Summon a mage</h3>
+    ${realmId && realms.some(r => r.id === realmId) ? `<p>A new Claude session in <b>${esc(realmOf(rid).name)}</b>, opened in a new cmux workspace.</p>`
+      : `<label class="lbl" for="sumRealm">Realm</label><select id="sumRealm">${realms.map(r => `<option value="${esc(r.id)}"${r.id === rid ? " selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`}
+    <span class="lbl">Rank</span><div class="ranks" role="radiogroup" aria-label="Rank" id="sumRanks"></div>
+    <div id="sumLandRow"${landsOf(rid).length > 1 ? "" : " hidden"}><label class="lbl" for="sumLand">Folder</label><select id="sumLand">${landOptions(rid)}</select></div>
+    <label class="lbl" for="sumPrompt">First words <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+    <textarea id="sumPrompt" placeholder="What should it start on?"></textarea>
+    <label class="check"><input type="checkbox" id="sumFocus" checked> Take me there now</label>
+    <div class="btns"><button class="btn alt" value="cancel">Cancel</button><button class="btn" value="ok">Summon</button></div>`, {
+    init() {
+      const box = $("#sumRanks");
+      for (const k of RANK_ORDER) {
+        const b = document.createElement("button"); b.type = "button"; b.className = "rank"; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(k === model));
+        b.appendChild(makeMage({ id: "summon-" + k, model: k, state: "rest" }, 1, RANK[k].title));
+        b.insertAdjacentHTML("beforeend", `<span>${RANK[k].title}</span><small>${RANK[k].model}</small>`);
+        b.onclick = () => { model = k; box.querySelectorAll(".rank").forEach(x => x.setAttribute("aria-checked", String(x === b))); };
+        box.appendChild(b);
+      }
+      const rs = $("#sumRealm");
+      if (rs) rs.onchange = () => { rid = rs.value; $("#sumLand").innerHTML = landOptions(rid); $("#sumLandRow").hidden = landsOf(rid).length < 2; };
+    },
+    collect: () => ({ land: $("#sumLand").value, prompt: $("#sumPrompt").value, focus: $("#sumFocus").checked }),
+  });
+  if (!res) return;
+  const r = await post(`/api/realms/${encodeURIComponent(rid)}/summon`, { model, ...res });
+  toast(r.message ?? r.error);
+}
+$("#navSummon").onclick = () => summonDialog(ui.view === "realm" ? ui.realm : null);
+
+function renderGone() {
+  const g = data.dismissed ?? [];
+  $("#goneCount").textContent = String(g.length);
+  $("#goneList").innerHTML = g.map(d => `<li><span>${esc(d.name)}<small>${esc(realmOf(d.realmId)?.name ?? d.realmId)} · ${d.alive ? "still running" : "ended"} · dismissed ${ago(d.at) === "now" ? "just now" : ago(d.at) + " ago"}</small></span>
+    <button class="btn ghost small" data-restore="${esc(d.id)}">Restore</button></li>`).join("") || `<li><small>No one has been dismissed.</small></li>`;
+}
+$("#navGone").onclick = () => { $("#goneBox").hidden = !$("#goneBox").hidden; renderGone(); };
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-restore]"); if (!b) return;
+  const r = await post(`/api/sessions/${encodeURIComponent(b.dataset.restore)}/restore`, {}); toast(r.message ?? r.error);
+});
 
 /* ---------------- navigation ---------------- */
 function nextRequest() {
@@ -361,7 +446,9 @@ function onData(next) {
   const prevRealms = JSON.stringify(data.realms), prevSessions = JSON.stringify(data.sessions);
   data = next;
   const realmsChanged = JSON.stringify(data.realms) !== prevRealms, sessionsChanged = JSON.stringify(data.sessions) !== prevSessions;
+  renderGone();
   if (!realmsChanged && !sessionsChanged) return;
+  if (modal.open) return renderSide();   // don't rebuild the view under an open dialog
   if (ui.view === "map") {
     if (!map || !$("#mapwrap")) return renderMap();
     map.update(realmsOrdered()); renderLatest(data.sessions.filter(needsYou).sort((a, b) => b.since - a.since)[0]); renderSide();

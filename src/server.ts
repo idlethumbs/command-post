@@ -11,7 +11,10 @@ export interface PortalResult { ok: boolean; precision: "exact" | "app" | "none"
 export interface ServerDeps { uploadsDir?: string; uiDir: string; fontDirs: string[]; arcanumDir: string; getSnapshot(): Snapshot; onConfigChange(): void; openPortal(sessionId: string): Promise<PortalResult | undefined>;
   sendWord?(sessionId: string, text: string, images: string[]): Promise<{ ok: boolean; message: string } | undefined>;
   answerSeal?(sessionId: string, decision: "grant" | "refuse"): Promise<{ ok: boolean; message: string } | undefined>;
-  readSeal?(sessionId: string): Promise<{ request: string; question: string } | undefined> }
+  readSeal?(sessionId: string): Promise<{ request: string; question: string } | undefined>;
+  dismiss?(sessionId: string): { ok: boolean; message: string } | undefined;
+  restore?(sessionId: string): { ok: boolean; message: string } | undefined;
+  summon?(realmId: string, req: { model: string; land: string; prompt?: string; focus: boolean }): Promise<{ ok: boolean; message: string }> }
 
 export function createArcanumServer(d: ServerDeps) {
   const clients = new Set<http.ServerResponse>();
@@ -92,6 +95,18 @@ export function createArcanumServer(d: ServerDeps) {
         : body.decision === "grant" || body.decision === "refuse" ? await d.answerSeal?.(sm[1], body.decision) : (send(res, 400, { error: "decision must be grant or refuse" }), null);
       if (r === null) return;
       return r ? send(res, 200, r) : send(res, 404, { error: "No live mage with that id." });
+    }
+    const dm = /^\/api\/sessions\/([\w-]+)\/(dismiss|restore)$/.exec(p);
+    if (dm && req.method === "POST") {
+      const r = dm[2] === "dismiss" ? d.dismiss?.(dm[1]) : d.restore?.(dm[1]);
+      return r ? send(res, 200, r) : send(res, 404, { error: "No mage with that id." });
+    }
+    const su = /^\/api\/realms\/([\w-]+)\/summon$/.exec(p);
+    if (su && req.method === "POST") {
+      let body: any;
+      try { body = await readJson(req); } catch (e) { return send(res, 400, { error: (e as Error).message }); }
+      if (!d.summon) return send(res, 404, { error: "Summoning is off." });
+      return send(res, 200, await d.summon(su[1], { model: String(body.model ?? ""), land: String(body.land ?? ""), prompt: typeof body.prompt === "string" ? body.prompt : undefined, focus: body.focus !== false }));
     }
     const rm = /^\/api\/sessions\/([\w-]+)\/seal$/.exec(p);
     if (rm && req.method === "GET") return send(res, 200, (await d.readSeal?.(rm[1])) ?? {});

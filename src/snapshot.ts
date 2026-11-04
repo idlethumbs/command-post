@@ -1,5 +1,6 @@
 import path from "node:path";
 import { classify, modelOf } from "./classify";
+import { loadDismissed } from "./dismissed";
 import { portalPrecision } from "./portal";
 import { replyCapability, sealCapability } from "./send";
 import { detectHost } from "./procs";
@@ -49,9 +50,11 @@ export function buildSnapshot(d: SnapshotDeps): Snapshot {
     return {
       id: e.sessionId, pid: e.pid, realmId: realmOf.get(e.cwd)!, name: e.name, title: t.aiTitle, model: modelOf(t.model), modelId: t.model,
       state, since, host, where: WHERE[host], briefing: briefingOf(t), lastText: last && (last.length > 4000 ? "…" + last.slice(-4000) : last),
-      waitingFor: e.waitingFor, cwd: e.cwd, branch: t.gitBranch, jobId: e.jobId, tmux: e.tmux, note, status: e.status,
+      waitingFor: e.waitingFor, cwd: e.cwd, branch: t.gitBranch, jobId: e.jobId, tmux: e.tmux, note, status: e.status, recent: t.recent,
     };
   });
   for (const s of sessions) { s.portal = portalPrecision(s, !!d.hasCmux); s.reply = replyCapability(s, !!d.hasCmux); s.seal = sealCapability(s, !!d.hasCmux); }
-  return { generatedAt: now, realms: cfg.realms, sessions };
+  const gone = loadDismissed(d.arcanumDir);
+  const dismissed = Object.entries(gone).map(([id, v]) => ({ id, ...v, alive: sessions.some(s => s.id === id) })).sort((a, b) => b.at - a.at);
+  return { generatedAt: now, realms: cfg.realms, sessions: sessions.filter(s => !gone[s.id]), dismissed };
 }

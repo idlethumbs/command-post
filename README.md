@@ -18,7 +18,7 @@ Drag to pan, scroll or pinch to zoom, `0` to fit all realms, `←`/`→` + `⏎`
 | | |
 |---|---|
 | Reads | `~/.claude/sessions/*.json` (live session registry), the tail of each live session's transcript under `~/.claude/projects/`, `ps` (to check that sessions are alive and which terminal hosts them), `git rev-parse` (to group folders into realms) |
-| Writes | `~/.arcanum/realms.json`: discovered realms and your charter edits (names, landmarks, banners, merges); safe to edit by hand or delete. `~/.arcanum/uploads/`: images you attach, deleted after 7 days. |
+| Writes | `~/.arcanum/realms.json`: discovered realms and your charter edits (names, landmarks, banners, merges); safe to edit by hand or delete. `~/.arcanum/uploads/`: images you attach, deleted after 7 days. `~/.arcanum/dismissed.json`: mages you've dismissed. |
 | Runs | Only when you click Open portal, Send word, or Grant/Refuse: `cmux`, `osascript`, `tmux` or `open`, with arguments taken from `ps` and cmux, never through a shell |
 | Never | Claude Code settings, hooks or transcripts |
 
@@ -39,6 +39,11 @@ Arcanum reads the screen before it types, and refuses rather than guessing:
 - if the session is in shell mode
 
 Sending while a session is casting queues your word until it finishes.
+
+## Summon and dismiss
+
+- **Summon a mage** (in a realm, or from the sidebar) opens a new cmux workspace in one of the realm's folders, running `claude --model haiku|sonnet|opus|fable`, optionally with your first words. The new mage appears in the realm within a second or two.
+- **Dismiss** (× on a row, or the Dismiss button) removes a mage from Arcanum for good. **The session isn't closed**: it keeps running in its terminal. Restore it from **Dismissed mages** in the sidebar. The list lives in `~/.arcanum/dismissed.json`.
 
 ## Open portal
 

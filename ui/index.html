@@ -20,8 +20,9 @@
       <button id="navMap" aria-current="page"><span class="ico">◈</span>World map<span></span></button>
       <button id="navScry"><span class="ico">⌕</span>Scry for a mage<kbd>⌘K</kbd></button>
       <div class="scry" id="scryBox" hidden><input id="scry" type="text" placeholder="Name, realm or topic…" aria-label="Search mages"><div class="results" id="results"></div></div>
-      <button aria-disabled="true" title="Coming in M5"><span class="ico">✧</span>Summon a mage<span class="soon">LATER</span></button>
-      <button aria-disabled="true" title="Coming in M5"><span class="ico">⌂</span>Archive of the departed<span class="soon">LATER</span></button>
+      <button id="navSummon"><span class="ico">✧</span>Summon a mage<span></span></button>
+      <button id="navGone"><span class="ico">⌂</span>Dismissed mages<span class="soon" id="goneCount">0</span></button>
+      <div class="gone" id="goneBox" hidden><ul id="goneList"></ul></div>
       <button aria-disabled="true" title="Settings: sound, hooks, theme"><span class="ico">❖</span>Grimoire<span class="soon">LATER</span></button>
     </nav>
 
@@ -39,6 +40,7 @@
   <main class="stage" id="view"></main>
 </div>
 <div class="toast" id="toast" hidden></div>
+<dialog class="modal" id="modal" aria-labelledby="modalTitle"><form method="dialog" id="modalForm"></form></dialog>
 <script type="module" src="/ui/app.js"></script>
 </body>
 </html>
