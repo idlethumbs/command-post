@@ -1,12 +1,12 @@
 /* The world map: a fixed-size painted world under an RTS-style camera (drag to pan, wheel/pinch to zoom, fit by default). */
-import { buildTerrain, clamp, makeLandmark, REALM_R } from "./art.js";
+import { BAYER, buildTerrain, clamp, hash, makeLandmark, noise, off, REALM_R } from "./art.js";
 
 const S = 3;                      // CSS px per world px at zoom 1: the painted-pixel size
 const Z_MIN = 0.2, Z_MAX = 3;
 const MARGIN = REALM_R * 2.3;     // sea around the outermost realms
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-export function createMap(wrap, { onOpen, onSelect, siteContent }) {
+export function createMap(wrap, { onOpen, onSelect, siteContent, motion = () => true }) {
   wrap.innerHTML = `<div class="world" id="world"></div><div class="flash" id="flash"></div>
     <div class="overlay zoombar" role="group" aria-label="Zoom">
       <button class="btn ghost" data-z="in" aria-label="Zoom in">+</button>
@@ -82,6 +82,48 @@ export function createMap(wrap, { onOpen, onSelect, siteContent }) {
     const t = buildTerrain(realms, x0, y0, W, H);
     t.className = "terrain"; t.setAttribute("role", "img"); t.setAttribute("aria-label", "World map of your realms");
     world.prepend(t);
+    buildAmbience(t, W, H);
+  }
+
+  /* ambience: wave glints on real sea pixels, and dithered cloud veils drifting east */
+  let amb = null, glints = [], clouds = null, tick = 0, timer = null;
+  function buildAmbience(terrain, W, H) {
+    world.querySelector("canvas.ambience")?.remove();
+    amb = off(W, H); amb.className = "ambience"; amb.setAttribute("aria-hidden", "true");
+    world.insertBefore(amb, terrain.nextSibling);
+    const px = terrain.getContext("2d").getImageData(0, 0, W, H).data;
+    glints = [];
+    for (let i = 0; i < W * H; i += 37) {
+      const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
+      if (b > r + 50 && b > g + 8 && hash(i, 7) < 0.45) glints.push({ x: i % W, y: (i / W) | 0, ph: hash(i, 3) * 60, per: 40 + hash(i, 5) * 50 });
+    }
+    clouds = off(W, H);
+    const cc = clouds.getContext("2d"), img = cc.createImageData(W, H), d = img.data;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const v = noise(x + 900, y, 46) * 0.72 + noise(x, y + 500, 15) * 0.28;
+      if (v > 0.64 + BAYER[(y & 3) * 4 + (x & 3)] * 0.1) { const i = (y * W + x) * 4; d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = 15; }
+    }
+    cc.putImageData(img, 0, 0);
+    clearInterval(timer);
+    timer = setInterval(drawAmbience, 110);
+    drawAmbience();
+  }
+  function drawAmbience() {
+    if (!wrap.isConnected) { clearInterval(timer); return; }
+    if (!amb) return;
+    const c = amb.getContext("2d"), W = amb.width, H = amb.height;
+    c.clearRect(0, 0, W, H);
+    if (!motion()) { c.drawImage(clouds, 0, 0); return; }
+    tick++;
+    const dx = Math.floor(tick * 0.12) % W;
+    c.drawImage(clouds, dx, 0); c.drawImage(clouds, dx - W, 0);
+    for (const g of glints) {
+      const k = ((tick + g.ph) % g.per) / g.per;
+      if (k > 0.12) continue;
+      const a = Math.sin(k / 0.12 * Math.PI);
+      c.fillStyle = `rgba(230,248,255,${(a * 0.85).toFixed(2)})`;
+      c.fillRect(g.x - (a > 0.6 ? 1 : 0), g.y, a > 0.6 ? 3 : 1, 1);
+    }
   }
 
   function renderSites(order) {

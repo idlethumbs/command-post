@@ -66,6 +66,13 @@ The first time a portal uses AppleScript, macOS asks you to allow your terminal 
 - Sessions in `$HOME`, temp dirs, or a folder holding several repos (like `~/projects`) go to **The Wilds**.
 - Use **Edit realm → Absorb another realm** to group repos that belong together.
 
+## Spellwork and the Grimoire
+
+- When a mage starts asking for you, a raven flies from its realm (or the mage) to the ravens list. The realm pulses and the mage hops.
+- Sending word, granting or refusing a seal, and arriving by fast travel each have their own sparkle burst.
+- The map's sea glints and cloud shadows drift.
+- **Grimoire** (sidebar) holds the settings: **chiptune sounds**, off by default and synthesised in the browser with no audio files; **volume**; **motion**, which follows macOS by default, or Full / Calm; and **Preview a raven**.
+
 ## Develop
 
 ```sh

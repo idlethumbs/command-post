@@ -25,6 +25,7 @@
     --f-write: "Alegreya Sans", system-ui, -apple-system, sans-serif; /* what you type */
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { height: 100%; }
   body { margin: 0; background: var(--night); color: var(--parch); font-family: var(--f-ui); font-size: 16px; }
   canvas { image-rendering: pixelated; display: block; }
@@ -53,14 +54,14 @@
 
   /* sidebar: nav */
   .nav { display: grid; gap: 2px; }
-  .nav button {
+  .nav > button {
     all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center;
     padding: 7px 10px; border-radius: 4px; font-size: 15px;
   }
-  .nav button:hover { background: var(--panel-hi); }
-  .nav button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
-  .nav button[aria-current="page"] { background: var(--panel-hi); box-shadow: inset 3px 0 0 var(--gold); }
-  .nav button[aria-disabled="true"] { color: var(--muted); cursor: default; }
+  .nav > button:hover { background: var(--panel-hi); }
+  .nav > button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+  .nav > button[aria-current="page"] { background: var(--panel-hi); box-shadow: inset 3px 0 0 var(--gold); }
+  .nav > button[aria-disabled="true"] { color: var(--muted); cursor: default; }
   .nav .ico { color: var(--gold); text-align: center; font-size: 15px; }
   .nav .soon { font-size: 10px; font-weight: 600; letter-spacing: 1px; color: var(--muted); border: 1px solid var(--frame); padding: 0 5px; border-radius: 2px; }
   .scry { display: grid; gap: 6px; }
@@ -108,7 +109,8 @@
   .mapwrap.dragging { cursor: grabbing; }
   .mapwrap.dragging .site { pointer-events: none; }
   .world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; --z: 1; }
-  .world > canvas.terrain { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .world > canvas.terrain, .world > canvas.ambience { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .world > canvas.ambience { pointer-events: none; }
   /* labels stay a constant screen size whatever the zoom; landmarks scale with the world */
   .site .tag, .site.sel::before { scale: calc(1 / var(--z)); transform-origin: 50% 0; }
   .mapwrap[data-zoom="mid"] .site:not(.needs):not(.sel):not(:hover) .name { display: none; }
@@ -338,3 +340,25 @@
   .dossier .actions { display: flex; gap: 8px; margin-left: auto; }
   .btn.small { font-size: 12px; padding: 5px 9px; }
   .dossier h3 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* spellwork */
+  canvas.fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 20; image-rendering: pixelated; }
+  .mage.alerted canvas { animation: alerted .55s cubic-bezier(.3, 1.8, .5, 1) 2; }
+  @keyframes alerted { 40% { translate: 0 -10px; } }
+  .site.called { animation: called .7s ease-out 2; }
+  @keyframes called { 30% { filter: brightness(1.6) drop-shadow(0 0 6px #ef5470); } }
+  .raven.arrived { animation: arrived 1.2s ease-out; }
+  @keyframes arrived { 0% { background: rgba(239,84,112,.45); } }
+  html[data-motion="calm"] *, html[data-motion="calm"] *::before, html[data-motion="calm"] *::after { animation: none !important; transition: none !important; }
+
+  /* grimoire */
+  .grim { display: grid; gap: 10px; padding: 10px; border-radius: 4px; background: rgba(15,12,30,.45); }
+  .grim #gPreview { justify-self: start; white-space: nowrap; }
+  .grim .rowx { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; font-size: 14px; }
+  .grim select, .grim input[type=range] { accent-color: var(--gold); }
+  .grim select { background: var(--ink); color: var(--parch); border: 2px solid var(--frame); border-radius: 4px; font: inherit; font-size: 13px; padding: 3px 6px; }
+  .switch { all: unset; box-sizing: border-box; display: inline-block; cursor: pointer; width: 40px; height: 22px; border-radius: 11px; background: var(--ink); box-shadow: inset 0 0 0 2px var(--frame); position: relative; }
+  .switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: left .15s; }
+  .switch[aria-checked="true"] { background: #4a3a10; box-shadow: inset 0 0 0 2px var(--gold); }
+  .switch[aria-checked="true"]::after { left: 22px; background: var(--gold); }
+  .switch:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

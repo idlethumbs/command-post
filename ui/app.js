@@ -1,10 +1,23 @@
 /* Arcanum UI: live, read-only view of your Claude Code sessions. Data comes from the local daemon over SSE. */
 import { BANNERS, BIOME, LANDMARKS, RANK, STATE, buildBackdrop, drawMage, makeLandmark, makeMage, renderSprite, tick, tint } from "./art.js";
 import { createMap } from "./map.js";
+import { burst, initFx, pulse, raven } from "./fx.js";
+import { cue, setSound } from "./sound.js";
 
 const $ = s => document.querySelector(s);
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* Grimoire settings (per browser): sound is off unless you turn it on; motion follows macOS unless you choose */
+const prefs = { sound: false, volume: 0.5, motion: "auto" };
+try { Object.assign(prefs, JSON.parse(localStorage.getItem("arcanum.prefs") || "{}")); } catch {}
+const osCalm = matchMedia("(prefers-reduced-motion: reduce)");
+const motionOK = () => prefs.motion === "full" || (prefs.motion === "auto" && !osCalm.matches);
+function applyPrefs() {
+  document.documentElement.dataset.motion = motionOK() ? "full" : "calm";
+  setSound(prefs.sound, prefs.volume);
+  try { localStorage.setItem("arcanum.prefs", JSON.stringify(prefs)); } catch {}
+}
+applyPrefs(); osCalm.addEventListener?.("change", applyPrefs);
+initFx(motionOK);
 const needsYou = s => s.state === "counsel" || s.state === "seal";
 const NEW_FOR = 15 * 60 * 1000;
 
@@ -108,7 +121,7 @@ function renderMap(fromRoute) {
     `<div class="mapwrap"><div class="empty"><div><h2 style="font-family:var(--f-display);font-weight:400;font-size:40px;margin:0">No realms yet</h2><p>Start a Claude Code session in any project and its realm appears here.</p></div></div></div>`;
   if (!data.realms.length) { map = null; return renderSide(); }
   const wrap = $("#mapwrap");
-  map = createMap(wrap, { onOpen: travel, siteContent });
+  map = createMap(wrap, { onOpen: travel, siteContent, motion: motionOK });
   wrap.insertAdjacentHTML("beforeend", `<div class="overlay title-scroll"><h2>The Known Realms</h2></div>
     <div id="latestSlot"></div>
     <div class="overlay legend"><span><span class="g counsel">!</span> seeks counsel</span><span><span class="g seal">?</span> awaits your seal</span><span><span class="g cast">✦</span> casting</span><span>drag to pan · scroll to zoom</span></div>
@@ -121,7 +134,12 @@ function renderLatest(s) {
   const slot = $("#latestSlot"); if (!slot) return;
   slot.innerHTML = s ? `<button class="overlay latest" data-go="${esc(s.id)}"><span class="g counsel">✉</span><span class="txt"><b>${esc(s.name)}</b> ${STATE[s.state].verb} · ${esc(s.briefing)}</span><span class="g rest">${ago(s.since)}</span></button>` : "";
 }
-function travel(rid, sid) { if (!map) return openRealm(rid, sid); map.flyTo(rid, () => openRealm(rid, sid), still); }
+function travel(rid, sid) {
+  cue.travel();
+  const arrive = () => { openRealm(rid, sid); requestAnimationFrame(() => burst(document.querySelector(".scene .landmark"), "arrive")); };
+  if (!map) return arrive();
+  map.flyTo(rid, arrive, !motionOK());
+}
 function goMap() { renderMap(); }
 
 /* ---------------- realm view ---------------- */
@@ -271,6 +289,7 @@ function wireComms(s) {
       const btn = f.querySelector("[type=submit]"); btn.disabled = true; btn.textContent = "Sending…";
       const r = await post(`/api/sessions/${encodeURIComponent(s.id)}/send`, { text, images: imgs.map(p => p.id) });
       toast(r.message ?? r.error);
+      if (r.ok) { burst(document.querySelector(`.mage[data-session="${CSS.escape(s.id)}"] canvas`), "word"); cue.word(); }
       if (r.ok) { delete drafts[s.id]; ta.value = ""; imgs.forEach(p => URL.revokeObjectURL(p.url)); delete pics[s.id]; renderAttach(s); }
       btn.disabled = false; btn.textContent = "Send word";
     };
@@ -279,6 +298,7 @@ function wireComms(s) {
     document.querySelectorAll("[data-seal]").forEach(x => x.disabled = true);
     const r = await post(`/api/sessions/${encodeURIComponent(s.id)}/seal`, { decision: b.dataset.seal });
     toast(r.message ?? r.error);
+    if (r.ok) { const g = b.dataset.seal === "grant"; burst(document.querySelector(`.mage[data-session="${CSS.escape(s.id)}"] canvas`), g ? "grant" : "refuse"); g ? cue.grant() : cue.refuse(); }
     document.querySelectorAll("[data-seal]").forEach(x => x.disabled = false);
   });
   const req = $("#sealReq");
@@ -399,6 +419,24 @@ async function summonDialog(realmId) {
 }
 $("#navSummon").onclick = () => summonDialog(ui.view === "realm" ? ui.realm : null);
 
+function renderGrim() {
+  const box = $("#grimBox");
+  box.innerHTML = `<div class="rowx"><span>Chiptune sounds</span><button class="switch" role="switch" id="gSound" aria-checked="${prefs.sound}" aria-label="Chiptune sounds"></button></div>
+    <div class="rowx"${prefs.sound ? "" : " hidden"}><label for="gVol">Volume</label><input type="range" id="gVol" min="0.1" max="1" step="0.1" value="${prefs.volume}"></div>
+    <div class="rowx"><label for="gMotion">Motion</label><select id="gMotion">
+      <option value="auto"${prefs.motion === "auto" ? " selected" : ""}>Follow macOS</option><option value="full"${prefs.motion === "full" ? " selected" : ""}>Full spellwork</option><option value="calm"${prefs.motion === "calm" ? " selected" : ""}>Calm (no motion)</option></select></div>
+    <button class="btn ghost small" id="gPreview" type="button">Preview a raven</button>`;
+  $("#gPreview").onclick = () => {
+    const here = ui.view === "realm" ? troopsOf(ui.realm) : data.sessions;
+    const s = here.find(x => x.id === ui.session) ?? here[0];
+    s ? playEvents([{ kind: "counsel", s }]) : toast("No mages to preview with.");
+  };
+  $("#gSound").onclick = () => { prefs.sound = !prefs.sound; applyPrefs(); renderGrim(); if (prefs.sound) cue.test(); };
+  const vol = $("#gVol"); if (vol) vol.onchange = () => { prefs.volume = Number(vol.value); applyPrefs(); cue.test(); };
+  $("#gMotion").onchange = e => { prefs.motion = e.target.value; applyPrefs(); };
+}
+$("#navGrim").onclick = () => { const b = $("#grimBox"); b.hidden = !b.hidden; if (!b.hidden) renderGrim(); };
+
 function renderGone() {
   const g = data.dismissed ?? [];
   $("#goneCount").textContent = String(g.length);
@@ -459,22 +497,53 @@ document.addEventListener("keydown", e => {
 });
 
 /* ---------------- live data ---------------- */
+/* what changed since the last update, worth a raven: a mage starting to ask for you, or a new mage arriving */
+let prevStates = null;
+function eventsFrom(next) {
+  const was = prevStates, now = new Map(next.sessions.map(s => [s.id, s.state]));
+  prevStates = now;
+  if (!was) return [];
+  const ev = [];
+  for (const s of next.sessions) {
+    const before = was.get(s.id);
+    if (needsYou(s) && before !== s.state && !(before && needsYou({ state: before }))) ev.push({ kind: s.state, s });
+    else if (before === undefined) ev.push({ kind: "arrive", s });
+  }
+  return ev;
+}
+function playEvents(ev) {
+  for (const e of ev.slice(0, 4)) {
+    const site = document.querySelector(`.site[data-realm="${CSS.escape(e.s.realmId)}"]`);
+    const mage = document.querySelector(`.mage[data-session="${CSS.escape(e.s.id)}"] canvas`);
+    const from = mage ?? site?.querySelector("canvas") ?? document.querySelector(".realm-top h2");
+    if (e.kind === "arrive") { burst(from, "arrive"); continue; }
+    e.kind === "seal" ? cue.seal() : cue.counsel();
+    if (site) { pulse(site.querySelector("canvas"), e.kind === "seal" ? "#f2c14e" : "#ef5470"); site.classList.add("called"); setTimeout(() => site.classList.remove("called"), 1500); }
+    if (mage) { mage.closest(".mage").classList.add("alerted"); burst(mage, "alert"); }
+    const to = document.querySelector(`#feed [data-go="${CSS.escape(e.s.id)}"]`);
+    raven(from, to, () => { to?.classList.add("arrived"); setTimeout(() => to?.classList.remove("arrived"), 1300); });
+  }
+}
+
 function onData(next) {
   const prevRealms = JSON.stringify(data.realms), prevSessions = JSON.stringify(data.sessions);
+  const ev = eventsFrom(next);
   data = next;
   const realmsChanged = JSON.stringify(data.realms) !== prevRealms, sessionsChanged = JSON.stringify(data.sessions) !== prevSessions;
   renderGone();
   if (!realmsChanged && !sessionsChanged) return;
   if (modal.open) return renderSide();   // don't rebuild the view under an open dialog
   if (ui.view === "map") {
-    if (!map || !$("#mapwrap")) return renderMap();
+    if (!map || !$("#mapwrap")) { renderMap(true); return playEvents(ev); }
     map.update(realmsOrdered()); renderLatest(data.sessions.filter(needsYou).sort((a, b) => b.since - a.since)[0]); renderSide();
+    playEvents(ev);
   } else {
     // don't yank the charter out from under someone typing a name
     if (document.activeElement?.id === "rname") return renderSide();
     const typing = document.activeElement?.id === "reply";
     const sc = $("#view").scrollTop; renderRealm(); $("#view").scrollTop = sc;
     if (typing) { const t = $("#reply"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+    playEvents(ev);
   }
 }
 function connect() {
@@ -486,7 +555,7 @@ function connect() {
 /* animation clock + relative times */
 const logo = $("#logoSprite"); const drawLogo = fr => renderSprite(logo, 38, 54, 1.25, c => drawMage(c, "fable", "cast", fr));
 drawLogo(0);
-if (!still) setInterval(() => { tick(); drawLogo(performance.now() / 260 | 0); }, 260);
+setInterval(() => { if (motionOK()) { tick(); drawLogo(performance.now() / 260 | 0); } }, 260);
 setInterval(renderSide, 30000);
 
-fetch("/api/state").then(r => r.json()).then(d => { data = d; route(); }).catch(() => renderMap(true)).finally(connect);
+fetch("/api/state").then(r => r.json()).then(d => { data = d; eventsFrom(d); route(); }).catch(() => renderMap(true)).finally(connect);
