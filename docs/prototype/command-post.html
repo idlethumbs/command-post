@@ -1,197 +1,183 @@
 <meta charset="utf-8">
-<title>Command Post</title>
+<title>Arcanum</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;600&family=VT323&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Silkscreen&family=Pixelify+Sans:wght@400;600&display=swap">
 <style>
   :root {
     color-scheme: dark;
-    --night: #141a2e;      /* frame / chrome */
-    --navy: #1f2a4d;       /* dialog boxes */
-    --navy-hi: #2f3f72;
-    --parch: #efe6c8;      /* dialog paper */
-    --ink: #1a1c2c;
-    --grass: #5c9a45;
-    --grass-dk: #3e7434;
-    --sand: #d8c07a;
-    --alert: #e5483a;      /* awaiting orders */
-    --clear: #f4c542;      /* requesting clearance / rank gold */
-    --radio: #59c3e6;      /* on mission */
-    --muted: #8a93b8;
-    --f-display: "Press Start 2P", ui-monospace, monospace;
+    --night: #17142b;      /* chrome */
+    --panel: #262046;      /* dialog boxes */
+    --frame: #4a3f7a;
+    --parch: #efe3c2;      /* parchment */
+    --ink: #120f22;
+    --gold: #f2c14e;       /* seals, rank, selection */
+    --counsel: #e8486b;    /* seeks counsel (wants a reply) */
+    --cast: #6fe3ff;       /* casting (working) */
+    --muted: #9a92c4;
+    --sea: #1d3b6e;
+    --f-display: "Jacquard 24", "Pixelify Sans", serif;
+    --f-label: "Silkscreen", ui-monospace, monospace;
     --f-body: "Pixelify Sans", ui-rounded, system-ui, sans-serif;
-    --f-data: "VT323", ui-monospace, monospace;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
-    background: var(--night);
-    color: var(--parch);
-    font-family: var(--f-body);
-    font-size: 17px;
-    padding-inline: 16px;
-    padding-block: 16px 40px;
-    image-rendering: pixelated;
+    background: var(--night); color: var(--parch); font-family: var(--f-body); font-size: 17px;
+    padding-inline: 16px; padding-block: 16px 40px;
   }
+  canvas { image-rendering: pixelated; display: block; }
   .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
-
-  /* ---- pixel frame: the one "object" treatment, used for panels ---- */
   .px {
-    background: var(--navy);
-    box-shadow:
-      0 0 0 3px var(--ink),
-      0 0 0 6px var(--navy-hi),
-      0 0 0 9px var(--ink),
-      6px 6px 0 9px rgba(0,0,0,.35);
+    background: var(--panel);
+    box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--frame), 0 0 0 9px var(--ink), 6px 6px 0 9px rgba(0,0,0,.35);
     margin: 9px;
   }
+  .lbl { font-family: var(--f-label); font-size: 12px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  kbd { font-family: var(--f-label); font-size: 11px; background: var(--ink); border: 2px solid var(--frame); padding: 0 5px; color: var(--parch); }
+  .hint { font-family: var(--f-label); font-size: 11px; color: var(--muted); }
 
-  header.top {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px;
-    justify-content: space-between;
-  }
+  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; justify-content: space-between; }
   .logo { display: flex; align-items: center; gap: 12px; }
-  .logo h1 {
-    font-family: var(--f-display); font-size: 18px; margin: 0; letter-spacing: 1px;
-    color: var(--clear); text-shadow: 3px 3px 0 var(--ink);
-  }
-  .logo small { display: block; font-family: var(--f-data); font-size: 18px; color: var(--muted); letter-spacing: 1px; }
-  .stats { display: flex; flex-wrap: wrap; gap: 10px; font-family: var(--f-data); font-size: 20px; }
-  .stat { padding: 2px 10px; background: var(--ink); border: 2px solid var(--navy-hi); }
-  .stat b { font-family: var(--f-display); font-size: 12px; margin-right: 6px; font-weight: 400; }
-  .stat.alert b { color: var(--alert); }
-  .stat.clear b { color: var(--clear); }
-  .stat.radio b { color: var(--radio); }
-  .sample { font-family: var(--f-data); font-size: 16px; color: var(--ink); background: var(--sand); padding: 2px 8px; letter-spacing: 1px; }
+  .logo h1 { font-family: var(--f-display); font-weight: 400; font-size: 52px; line-height: .8; margin: 0; color: var(--gold); text-shadow: 3px 3px 0 var(--ink); }
+  .logo small { display: block; margin-top: 6px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stat { font-family: var(--f-label); font-size: 12px; padding: 4px 9px; background: var(--ink); border: 2px solid var(--frame); }
+  .stat b { font-size: 14px; margin-right: 6px; }
+  .stat.counsel b { color: var(--counsel); } .stat.seal b { color: var(--gold); } .stat.cast b { color: var(--cast); }
+  .sample { font-family: var(--f-label); font-size: 11px; color: var(--ink); background: var(--gold); padding: 3px 8px; }
 
-  /* ---- radio dispatch feed ---- */
-  .dispatch { padding: 14px 16px 12px; }
-  .dispatch h2, .panel-h {
-    font-family: var(--f-display); font-size: 11px; margin: 0 0 10px; color: var(--muted);
-    letter-spacing: 1px; display: flex; align-items: center; gap: 10px;
+  /* ravens feed */
+  .ravens { padding: 12px 14px 10px; }
+  .ravens h2 { margin: 0 0 8px; display: flex; gap: 10px; align-items: center; }
+  .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .feed button {
+    all: unset; cursor: pointer; width: 100%; display: grid; grid-template-columns: 50px 22px minmax(0, 140px) 1fr; gap: 10px;
+    align-items: baseline; padding: 4px 6px; font-size: 16px;
   }
-  .led { width: 8px; height: 8px; background: var(--alert); display: inline-block; animation: blink 1.2s steps(2) infinite; }
-  @keyframes blink { 50% { opacity: .2; } }
-  .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-  .feed li button {
-    all: unset; cursor: pointer; display: grid; grid-template-columns: 56px 18px minmax(0, 150px) 1fr; gap: 10px;
-    align-items: baseline; width: 100%; padding: 4px 6px; font-family: var(--f-data); font-size: 20px; line-height: 1.1;
-  }
-  .feed li button:hover, .feed li button:focus-visible { background: var(--navy-hi); outline: none; }
-  .feed .t { color: var(--muted); font-variant-numeric: tabular-nums; }
-  .feed .k { font-family: var(--f-display); font-size: 11px; }
-  .feed .k.alert { color: var(--alert); } .feed .k.clear { color: var(--clear); } .feed .k.radio { color: var(--radio); }
-  .feed .who { color: var(--sand); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .feed .msg { color: var(--parch); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .feed button:hover, .feed button:focus-visible { background: var(--frame); outline: none; }
+  .feed .t { font-family: var(--f-label); font-size: 12px; color: var(--muted); }
+  .feed .k { font-family: var(--f-label); font-size: 13px; }
+  .feed .who { font-family: var(--f-label); font-size: 12px; color: var(--gold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .feed .msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .c-counsel { color: var(--counsel); } .c-seal { color: var(--gold); } .c-cast { color: var(--cast); } .c-rest { color: var(--muted); }
 
-  /* ---- HQ map ---- */
-  .map-h { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; padding-inline: 9px; }
-  .map-h h2 { font-family: var(--f-display); font-size: 13px; margin: 0; color: var(--parch); }
-  .hint { font-family: var(--f-data); font-size: 18px; color: var(--muted); }
-  kbd { font-family: var(--f-display); font-size: 9px; background: var(--ink); border: 2px solid var(--navy-hi); padding: 2px 5px; color: var(--parch); }
-  .map { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
-  .outpost {
-    all: unset; cursor: pointer; position: relative; display: grid; grid-template-rows: auto 1fr auto;
-    min-height: 210px; background-color: var(--grass); background-image: var(--grass-tile); background-size: 48px 48px;
-    box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--grass-dk), 0 0 0 9px var(--ink);
-    margin: 9px; transition: transform .08s steps(2);
+  /* world map */
+  .map-h { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-inline: 9px; }
+  .map-h h2 { font-family: var(--f-display); font-weight: 400; font-size: 38px; line-height: 1; margin: 0; }
+  .map-h .right { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .worldframe { overflow: hidden; position: relative; padding: 0; }
+  .world { position: relative; aspect-ratio: 96 / 60; max-width: 100%; width: 100%; transform-origin: 50% 50%; }
+  .world.zoom { transform: scale(4); filter: brightness(1.7); transition: transform .5s steps(8), filter .5s steps(8); }
+  .world > canvas.terrain { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .site {
+    all: unset; cursor: pointer; position: absolute; translate: -50% -78%; display: grid; justify-items: center; gap: 2px;
   }
-  .outpost:hover { transform: translateY(-2px); }
-  .outpost:focus-visible, .outpost.sel { box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--clear), 0 0 0 9px var(--ink); outline: none; }
-  .outpost.sel::after {
-    content: "▶"; position: absolute; left: -26px; top: 50%; translate: 0 -50%; color: var(--clear);
-    font-family: var(--f-display); font-size: 14px; animation: nudge .6s steps(2) infinite;
+  .site .tag {
+    display: flex; gap: 6px; align-items: center; font-family: var(--f-label); font-size: 11px; background: var(--ink); color: var(--parch);
+    padding: 2px 6px; white-space: nowrap; box-shadow: 0 0 0 2px var(--frame);
   }
-  @keyframes nudge { 50% { translate: 4px -50%; } }
-  .banner {
-    display: flex; justify-content: space-between; align-items: center; gap: 8px;
-    background: var(--ink); padding: 8px 10px; font-family: var(--f-display); font-size: 10px; color: var(--parch);
+  .site .pin { display: inline-flex; gap: 3px; }
+  .site .pin i { font-style: normal; padding: 0 4px; color: var(--ink); }
+  .site .pin i.counsel { background: var(--counsel); color: var(--parch); } .site .pin i.seal { background: var(--gold); }
+  .site .pin i.cast { background: var(--cast); }
+  .site:hover .tag, .site:focus-visible .tag, .site.sel .tag { box-shadow: 0 0 0 2px var(--gold); outline: none; }
+  .site:focus-visible { outline: none; }
+  .site.sel canvas { animation: hop .7s steps(2) infinite; }
+  .site .new { font-family: var(--f-label); font-size: 10px; background: var(--gold); color: var(--ink); padding: 0 4px; animation: blink 1s steps(2) infinite; }
+  @keyframes hop { 50% { translate: 0 -3px; } }
+  @keyframes bhop { 50% { translate: -50% -3px; } }
+  @keyframes blink { 50% { opacity: .25; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 8px 12px; font-family: var(--f-label); font-size: 11px; color: var(--muted); background: var(--ink); }
+
+  /* realm */
+  .realm-in { animation: materialize .45s steps(5); }
+  @keyframes materialize { from { opacity: 0; filter: brightness(2.2); } to { opacity: 1; filter: none; } }
+  .realm-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-inline: 9px; }
+  .realm-top h2 { font-family: var(--f-display); font-weight: 400; font-size: 42px; line-height: 1; margin: 0; }
+  .realm-top .lands { font-family: var(--f-label); font-size: 11px; color: var(--muted); }
+  .realm-top .right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .scene {
+    position: relative; min-height: 190px; display: flex; align-items: flex-end; gap: 18px; padding: 16px 20px 14px 150px; flex-wrap: wrap;
+    background-image: var(--biome-tile); background-size: 48px 48px;
   }
-  .banner .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .banner .flag { width: 10px; height: 10px; flex: none; margin-right: 8px; display: inline-block; }
-  .badge {
-    flex: none; font-family: var(--f-display); font-size: 10px; padding: 4px 6px; color: var(--ink); background: var(--alert);
-    box-shadow: 0 0 0 2px var(--ink);
-  }
-  .badge.clear { background: var(--clear); }
-  .badge.none { background: transparent; color: var(--muted); box-shadow: none; }
-  .field { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: 2px; padding: 34px 10px 6px; flex-wrap: wrap; }
-  .tent { position: absolute; left: 10px; top: 10px; }
-  .unit { position: relative; display: grid; justify-items: center; }
-  .unit canvas { display: block; }
+  .scene .landmark { position: absolute; left: 14px; bottom: 10px; }
+  @media (max-width: 640px) { .scene { padding-left: 20px; padding-top: 120px; } .scene .landmark { top: 8px; bottom: auto; } }
+  .mage { all: unset; cursor: pointer; position: relative; display: grid; justify-items: center; gap: 4px; }
+  .mage .name { font-family: var(--f-label); font-size: 10px; background: rgba(18,15,34,.85); padding: 1px 5px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mage.sel .name, .mage:focus-visible .name { background: var(--gold); color: var(--ink); }
+  .mage:focus-visible { outline: none; }
   .bubble {
-    position: absolute; top: -18px; left: 50%; translate: -50% 0; font-family: var(--f-display); font-size: 10px;
-    padding: 3px 5px 2px; color: var(--ink); background: var(--parch); box-shadow: 0 0 0 2px var(--ink);
-    animation: hop .8s steps(2) infinite;
+    position: absolute; top: -14px; left: 50%; translate: -50% 0; font-family: var(--f-label); font-size: 12px; line-height: 1;
+    padding: 3px 5px; background: var(--parch); color: var(--ink); box-shadow: 0 0 0 2px var(--ink); animation: bhop .8s steps(2) infinite;
   }
-  .bubble.alert { background: var(--alert); color: var(--parch); }
-  .bubble.clear { background: var(--clear); }
-  .bubble.radio { background: var(--radio); animation: none; }
-  .bubble.ease { background: transparent; box-shadow: none; color: var(--parch); animation: drift 2s steps(4) infinite; }
-  @keyframes hop { 50% { translate: -50% -3px; } }
+  .bubble.counsel { background: var(--counsel); color: var(--parch); } .bubble.seal { background: var(--gold); }
+  .bubble.cast { background: var(--cast); animation: none; } .bubble.rest { background: transparent; box-shadow: none; color: var(--parch); animation: drift 2s steps(4) infinite; }
   @keyframes drift { 0% { translate: -30% 0; opacity: 0; } 50% { opacity: 1; } 100% { translate: 10% -8px; opacity: 0; } }
-  .foot { background: rgba(26,28,44,.72); padding: 6px 10px; font-family: var(--f-data); font-size: 18px; display: flex; justify-content: space-between; gap: 8px; }
-  .foot .latest { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--parch); }
-  .foot .ago { color: var(--sand); flex: none; }
 
-  /* ---- outpost view ---- */
-  .op { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 12px; align-items: start; }
-  @media (max-width: 820px) { .op { grid-template-columns: 1fr; } .feed li button { grid-template-columns: 48px 18px 1fr; } .feed .who { display: none; } }
-  .op-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-inline: 9px; }
-  .back { all: unset; cursor: pointer; font-family: var(--f-display); font-size: 10px; padding: 8px 10px; background: var(--ink); border: 2px solid var(--navy-hi); }
-  .back:hover, .back:focus-visible { border-color: var(--clear); color: var(--clear); }
-  .op-top h2 { font-family: var(--f-display); font-size: 14px; margin: 0; }
-  .op-top .hint { margin-left: auto; }
-  .roster { padding: 12px; display: grid; gap: 6px; }
-  .trooper {
-    all: unset; cursor: pointer; display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center;
-    padding: 6px 8px; border: 2px solid transparent;
-  }
-  .trooper:hover { background: var(--navy-hi); }
-  .trooper.sel, .trooper:focus-visible { border-color: var(--clear); background: var(--navy-hi); outline: none; }
-  .trooper .cs { font-family: var(--f-display); font-size: 10px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .trooper .rk { font-family: var(--f-data); font-size: 17px; color: var(--muted); }
-  .trooper .st { font-family: var(--f-display); font-size: 8px; padding: 3px 5px; color: var(--ink); white-space: nowrap; }
-  .st.alert { background: var(--alert); color: var(--parch); } .st.clear { background: var(--clear); }
-  .st.radio { background: var(--radio); } .st.ease { background: var(--muted); }
+  .op { display: grid; grid-template-columns: minmax(240px, 320px) 1fr; gap: 12px; align-items: start; }
+  @media (max-width: 820px) { .op { grid-template-columns: 1fr; } .feed button { grid-template-columns: 44px 20px 1fr; } .feed .who { display: none; } }
+  .roster { padding: 12px; display: grid; gap: 4px; }
+  .row { all: unset; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; border: 2px solid transparent; }
+  .row:hover { background: var(--frame); }
+  .row.sel, .row:focus-visible { border-color: var(--gold); background: var(--frame); outline: none; }
+  .row .cs { font-family: var(--f-label); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .row .rk { font-size: 14px; color: var(--muted); }
+  .chip { font-family: var(--f-label); font-size: 10px; padding: 2px 5px; color: var(--ink); white-space: nowrap; }
+  .chip.counsel { background: var(--counsel); color: var(--parch); } .chip.seal { background: var(--gold); }
+  .chip.cast { background: var(--cast); } .chip.rest { background: var(--muted); }
 
   .comms { padding: 16px; display: grid; gap: 14px; }
   .dossier { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
-  .portrait { background: var(--sand); box-shadow: 0 0 0 3px var(--ink); padding: 6px; background-image: var(--sand-tile); background-size: 48px 48px; }
-  .dossier h3 { font-family: var(--f-display); font-size: 13px; margin: 0 0 8px; line-height: 1.5; word-break: break-word; }
-  .dossier dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-family: var(--f-data); font-size: 19px; }
-  .dossier dt { color: var(--muted); letter-spacing: 1px; } .dossier dd { margin: 0; }
-  .paper {
-    background: var(--parch); color: var(--ink); padding: 14px 16px; box-shadow: 0 0 0 3px var(--ink);
-    font-size: 17px; line-height: 1.45; position: relative;
-  }
-  .paper .lbl { font-family: var(--f-display); font-size: 9px; letter-spacing: 1px; color: #6b5a2e; margin-bottom: 8px; display: block; }
+  .portrait { box-shadow: 0 0 0 3px var(--ink); padding: 4px 8px; background-image: var(--biome-tile); background-size: 48px 48px; }
+  .dossier h3 { font-family: var(--f-label); font-weight: 400; font-size: 16px; margin: 0 0 8px; word-break: break-word; }
+  .dossier dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 16px; }
+  .dossier dt { font-family: var(--f-label); font-size: 11px; color: var(--muted); padding-top: 3px; } .dossier dd { margin: 0; }
+  .paper { background: var(--parch); color: var(--ink); padding: 14px 16px; box-shadow: 0 0 0 3px var(--ink); line-height: 1.45; }
+  .paper .lbl { color: #7a5a24; display: block; margin-bottom: 6px; }
   .paper p { margin: 0 0 .6em; max-width: 68ch; } .paper p:last-child { margin-bottom: 0; }
-  .paper code { font-family: var(--f-data); font-size: 19px; background: rgba(26,28,44,.08); padding: 0 4px; }
-  .paper.typing p:last-child::after { content: "▌"; animation: blink .8s steps(2) infinite; }
-  .xmit { max-height: 260px; overflow: auto; }
+  .paper code { font-family: var(--f-label); font-size: 13px; background: rgba(18,15,34,.08); padding: 0 4px; }
+  .paper.casting p:last-child::after { content: "▌"; animation: blink .8s steps(2) infinite; }
+  .xmit { max-height: 250px; overflow: auto; }
   .orders { display: grid; gap: 10px; }
-  .orders label { font-family: var(--f-display); font-size: 9px; color: var(--muted); letter-spacing: 1px; }
   .orders textarea {
-    width: 100%; min-height: 84px; resize: vertical; background: var(--ink); color: var(--parch); border: 3px solid var(--navy-hi);
+    width: 100%; min-height: 84px; resize: vertical; background: var(--ink); color: var(--parch); border: 3px solid var(--frame);
     font-family: var(--f-body); font-size: 17px; padding: 10px;
   }
-  .orders textarea:focus { outline: none; border-color: var(--clear); }
-  .btns { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .orders textarea:focus { outline: none; border-color: var(--gold); }
+  .via { font-size: 15px; color: var(--muted); }
+  .via b { color: var(--parch); font-weight: 600; }
+  .btns { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
   .btn {
-    all: unset; cursor: pointer; font-family: var(--f-display); font-size: 10px; padding: 10px 12px; color: var(--ink);
-    background: var(--clear); box-shadow: 0 0 0 3px var(--ink), 4px 4px 0 3px var(--ink);
+    all: unset; cursor: pointer; font-family: var(--f-label); font-size: 12px; padding: 9px 12px; color: var(--ink); background: var(--gold);
+    box-shadow: 0 0 0 3px var(--ink), 4px 4px 0 3px var(--ink);
   }
   .btn:active { translate: 2px 2px; box-shadow: 0 0 0 3px var(--ink), 2px 2px 0 3px var(--ink); }
   .btn:focus-visible { outline: 3px dashed var(--parch); outline-offset: 5px; }
-  .btn.alt { background: var(--parch); }
-  .btn.deny { background: var(--alert); color: var(--parch); }
+  .btn.alt { background: var(--parch); } .btn.deny { background: var(--counsel); color: var(--parch); }
+  .btn.ghost { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 2px var(--frame); }
   .btns .hint { margin-left: auto; }
-  .req { font-family: var(--f-data); font-size: 20px; background: var(--ink); color: var(--clear); padding: 8px 10px; word-break: break-all; }
+  .req { font-family: var(--f-label); font-size: 13px; background: var(--ink); color: var(--gold); padding: 8px 10px; word-break: break-all; }
+
+  /* charter (realm editor) */
+  .charter { padding: 16px; display: grid; gap: 16px; }
+  .charter h3 { font-family: var(--f-display); font-weight: 400; font-size: 32px; margin: 0; line-height: 1; }
+  .charter .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; }
+  .charter label.lbl, .charter .lbl { display: block; margin-bottom: 6px; }
+  .charter input[type=text] { width: 100%; background: var(--ink); color: var(--parch); border: 3px solid var(--frame); font-family: var(--f-label); font-size: 14px; padding: 8px; }
+  .charter input[type=text]:focus { outline: none; border-color: var(--gold); }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choice { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 2px; padding: 4px 6px; background: var(--ink); border: 2px solid var(--frame); font-family: var(--f-label); font-size: 10px; }
+  .choice[aria-pressed="true"], .choice:focus-visible { border-color: var(--gold); outline: none; }
+  .sw { all: unset; cursor: pointer; width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--ink); }
+  .sw[aria-pressed="true"], .sw:focus-visible { box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--gold); outline: none; }
+  .landlist { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 4px; font-family: var(--f-label); font-size: 12px; }
+  .landlist li { background: var(--ink); padding: 5px 8px; }
+  .charter select { background: var(--ink); color: var(--parch); border: 3px solid var(--frame); font-family: var(--f-label); font-size: 12px; padding: 6px; max-width: 100%; }
 
   .toast {
-    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; z-index: 9;
-    font-family: var(--f-display); font-size: 10px; padding: 12px 14px; background: var(--parch); color: var(--ink);
-    box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--clear), 0 0 0 9px var(--ink);
+    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; z-index: 9; max-width: calc(100% - 32px);
+    font-family: var(--f-label); font-size: 12px; padding: 12px 14px; background: var(--parch); color: var(--ink);
+    box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--gold), 0 0 0 9px var(--ink);
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
@@ -200,14 +186,14 @@
   <header class="top">
     <div class="logo">
       <canvas id="logoSprite" width="63" height="69" aria-hidden="true"></canvas>
-      <div><h1>COMMAND POST</h1><small>CLAUDE SESSION OPERATIONS · LOCALHOST</small></div>
+      <div><h1>Arcanum</h1><small class="lbl">your claude sessions · localhost</small></div>
     </div>
     <div class="stats" id="stats"></div>
-    <span class="sample">SAMPLE INTEL · PROTOTYPE</span>
+    <span class="sample">SAMPLE DATA · PROTOTYPE</span>
   </header>
 
-  <section class="dispatch px" aria-label="Radio dispatches">
-    <h2><span class="led"></span>RADIO DISPATCHES · LATEST FIRST</h2>
+  <section class="ravens px" aria-label="Ravens">
+    <h2 class="lbl"><span class="c-counsel">✉</span>Ravens · newest first</h2>
     <ul class="feed" id="feed"></ul>
   </section>
 
@@ -216,279 +202,419 @@
 <div class="toast" id="toast" hidden></div>
 
 <script>
-/* ===================== sample data (illustrative, modelled on real projects) ===================== */
+/* ===================== sample data (illustrative, modelled on your real repos) ===================== */
 const NOW = Date.now(); const m = n => NOW - n * 60000;
-const PROJECTS = [
-  { id: "agent-rails", flag: "#e5483a" }, { id: "genui-module", flag: "#59c3e6" },
-  { id: "orchestration", flag: "#f4c542" }, { id: "lmax-frontend-tools", flag: "#b884f0" },
-  { id: "inbox-pa", flag: "#efe6c8" }, { id: "genui-examples", flag: "#7fd18a" },
+const BANNERS = ["#e8486b", "#6fe3ff", "#f2c14e", "#b884f0", "#7fd18a", "#ff9a3c", "#efe3c2"];
+const LANDMARKS = {
+  castle:  { label: "Castle",  biome: "meadow" },
+  tower:   { label: "Tower",   biome: "highland" },
+  grove:   { label: "Grove",   biome: "forest" },
+  cavern:  { label: "Cavern",  biome: "crystal" },
+  volcano: { label: "Volcano", biome: "ash" },
+  pyramid: { label: "Pyramid", biome: "desert" },
+  spire:   { label: "Spire",   biome: "snow" },
+  village: { label: "Village", biome: "meadow" },
+};
+const DEFAULT_REALMS = [
+  { id: "agent-rails", name: "Agent Rails", landmark: "castle", banner: "#e8486b", pos: { x: 22, y: 30 }, lands: ["~/projects/agent-rails", "~/projects/agent-rails/.claude/worktrees/*"] },
+  { id: "genui-module", name: "GenUI Module", landmark: "cavern", banner: "#6fe3ff", pos: { x: 49, y: 22 }, lands: ["~/projects/genui-module"] },
+  { id: "orchestration", name: "Orchestration", landmark: "tower", banner: "#f2c14e", pos: { x: 77, y: 28 }, lands: ["~/projects/orchestration (no repo)", "~/projects/orchestration/orchestrator"] },
+  { id: "lmax", name: "LMAX", landmark: "spire", banner: "#b884f0", pos: { x: 80, y: 72 }, lands: ["~/projects/lmax-frontend-tools", "~/projects/lmax-corp-nextjs"] },
+  { id: "inbox-pa", name: "Inbox PA", landmark: "village", banner: "#efe3c2", pos: { x: 30, y: 72 }, lands: ["~/projects/inbox-pa"] },
+  { id: "genui-examples", name: "GenUI Examples", landmark: "grove", banner: "#7fd18a", pos: { x: 55, y: 60 }, lands: ["~/projects/genui-examples"] },
+  { id: "prism", name: "Prism", landmark: "volcano", banner: "#ff9a3c", pos: { x: 9, y: 58 }, lands: ["~/projects/prism"], undiscovered: true },
 ];
-/* state: orders = awaiting orders, clear = requesting clearance (permission), mission = working, ease = idle/done */
+/* state: counsel = wants a reply, seal = wants permission, cast = working, rest = idle/done */
 const SESSIONS = [
-  { id: "s1", project: "agent-rails", callsign: "agent-rails-e4", model: "opus", state: "orders", since: m(3), term: "Ghostty · ttys023",
-    brief: "Migration for parent_synced_at is written and the test suite passes locally. It needs your call on how to backfill existing rows.",
-    xmit: ["Migration <code>0042_parent_synced_at</code> is in place and all 214 tests pass.", "Two ways to backfill existing skill rows:", "(a) Backfill inside the migration — one step, but locks the skills table for ~40s on prod-sized data.", "(b) Ship the column nullable, then backfill with a separate job — no lock, two deploys.", "I recommend (b). Which do you want?"] },
-  { id: "s2", project: "agent-rails", callsign: "agent-rails-10", model: "sonnet", state: "mission", since: m(1), term: "Ghostty · ttys028",
-    brief: "Rewriting the elsemem client retry logic; running the integration suite now.",
-    xmit: ["Running <code>pnpm test --filter elsemem-client</code> …"] },
-  { id: "s3", project: "agent-rails", callsign: "gcloud-creds", model: "haiku", state: "clear", since: m(11), term: "Background agent",
-    brief: "Tutorial walkthrough paused: it wants to refresh Google Cloud credentials.",
-    xmit: ["I need to refresh application-default credentials before continuing the tutorial."], req: "Bash: gcloud auth application-default login" },
-  { id: "s4", project: "genui-module", callsign: "genui-module-6d", model: "opus", state: "orders", since: m(8), term: "Ghostty · ttys011",
-    brief: "Both comparison evals finished. The short A2UI guide beat the worked examples; it's ready to write ADR 0009 and commit.",
-    xmit: ["Both evals are done.", "Short A2UI guide: <code>0.81</code> valid-render rate. Worked examples: <code>0.78</code>. The guide also cut prompt size by 3.1k tokens.", "Shall I write ADR 0009 with these numbers and commit to <code>main</code>?"] },
-  { id: "s5", project: "genui-module", callsign: "genui-module-e6", model: "fable", state: "ease", since: m(60 * 24 * 6), term: "VS Code",
+  { id: "s1", realm: "agent-rails", callsign: "agent-rails-e4", model: "opus", state: "counsel", since: m(3), host: "cmux", where: "cmux · agent-rails / pane 2",
+    brief: "The parent_synced_at migration is written and the tests pass. It needs your call on how to backfill existing rows.",
+    xmit: ["Migration <code>0042_parent_synced_at</code> is in place and all 214 tests pass.", "Two ways to backfill existing skill rows:", "(a) Inside the migration: one step, but it locks the skills table for ~40s on prod-sized data.", "(b) Ship the column nullable, then backfill with a separate job: no lock, two deploys.", "I recommend (b). Which do you want?"] },
+  { id: "s2", realm: "agent-rails", callsign: "agent-rails-10", model: "sonnet", state: "cast", since: m(1), host: "warp", where: "Warp",
+    brief: "Rewriting the elsemem client retry logic; running the integration suite now.", xmit: ["Running <code>pnpm test --filter elsemem-client</code> …"] },
+  { id: "s3", realm: "agent-rails", callsign: "gcloud-creds", model: "haiku", state: "seal", since: m(11), host: "bg", where: "Background",
+    brief: "The tutorial walkthrough is paused: it wants to refresh Google Cloud credentials.",
+    xmit: ["I need to refresh application-default credentials before continuing the tutorial."], req: "Bash · gcloud auth application-default login" },
+  { id: "s4", realm: "genui-module", callsign: "genui-module-6d", model: "opus", state: "counsel", since: m(8), host: "cmux", where: "cmux · genui / pane 1",
+    brief: "Both comparison evals are done and the short A2UI guide won. It's ready to write ADR 0009 and commit.",
+    xmit: ["Both evals are done.", "Short A2UI guide: <code>0.81</code> valid-render rate. Worked examples: <code>0.78</code>. The guide is also 3.1k tokens shorter.", "Shall I write ADR 0009 with these numbers and commit to <code>main</code>?"] },
+  { id: "s5", realm: "genui-module", callsign: "genui-module-e6", model: "fable", state: "rest", since: m(60 * 24 * 6), host: "vscode", where: "VS Code",
     brief: "Finished the M4 renderer refactor. Nothing outstanding.", xmit: ["M4 is merged. Standing by."] },
-  { id: "s6", project: "orchestration", callsign: "orchestration-9b", model: "sonnet", state: "orders", since: m(26), term: "Ghostty · ttys019",
-    brief: "Drafted the task-queue schema. It's unsure whether retries belong on the job or the worker.",
-    xmit: ["Schema draft is in <code>docs/queue.md</code>.", "Open question: should retry policy live on the job record (per-task control) or on the worker (simpler, uniform)?", "I lean per-job. Okay to proceed?"] },
-  { id: "s7", project: "orchestration", callsign: "orchestrator-a5", model: "fable", state: "mission", since: m(2), term: "Ghostty · ttys001",
+  { id: "s6", realm: "orchestration", callsign: "orchestration-9b", model: "sonnet", state: "counsel", since: m(26), host: "cmux", where: "cmux · orchestration / pane 1",
+    brief: "The task-queue schema is drafted. It's unsure whether retries belong on the job or the worker.",
+    xmit: ["The schema draft is in <code>docs/queue.md</code>.", "Open question: should retry policy live on the job record (per-task control) or on the worker (simpler, uniform)?", "I lean per-job. OK to proceed?"] },
+  { id: "s7", realm: "orchestration", callsign: "orchestrator-a5", model: "fable", state: "cast", since: m(2), host: "cmux", where: "cmux · orchestration / pane 2",
     brief: "Planning the supervisor restart strategy with three sub-agents.", xmit: ["Dispatching 3 sub-agents to compare restart strategies …"] },
-  { id: "s8", project: "orchestration", callsign: "orchestrator-df", model: "haiku", state: "ease", since: m(60 * 40), term: "VS Code",
-    brief: "Lint fixes landed.", xmit: ["Done — 12 files cleaned."] },
-  { id: "s9", project: "lmax-frontend-tools", callsign: "lmax-ui-tier", model: "opus", state: "orders", since: m(64), term: "Ghostty · ttys030",
-    brief: "Section 3 of the services-tier proposal is drafted and needs your review before it moves to section 4.",
-    xmit: ["Section 3 (BFF responsibilities) is drafted in Notion.", "Before section 4, can you confirm whether caching stays in scope for phase 1?"] },
-  { id: "s10", project: "inbox-pa", callsign: "inbox-pa-3c", model: "haiku", state: "mission", since: m(4), term: "Ghostty · ttys031",
+  { id: "s8", realm: "orchestration", callsign: "orchestrator-df", model: "haiku", state: "rest", since: m(60 * 40), host: "vscode", where: "VS Code",
+    brief: "Lint fixes landed.", xmit: ["Done: 12 files cleaned."] },
+  { id: "s9", realm: "lmax", callsign: "lmax-ui-tier", model: "opus", state: "counsel", since: m(64), host: "warp", where: "Warp",
+    brief: "Section 3 of the services-tier proposal is drafted and needs your review before section 4.",
+    xmit: ["Section 3 (BFF responsibilities) is drafted in Notion.", "Before I start section 4: does caching stay in scope for phase 1?"] },
+  { id: "s10", realm: "inbox-pa", callsign: "inbox-pa-3c", model: "haiku", state: "cast", since: m(4), host: "cmux", where: "cmux · inbox / pane 1",
     brief: "Triaging this morning's inbox into the digest.", xmit: ["Sorting 41 threads …"] },
-  { id: "s11", project: "genui-examples", callsign: "genui-examples-2f", model: "sonnet", state: "ease", since: m(60 * 24 * 6), term: "VS Code",
-    brief: "Example gallery builds cleanly.", xmit: ["All 18 examples render."] },
+  { id: "s11", realm: "genui-examples", callsign: "genui-examples-2f", model: "sonnet", state: "rest", since: m(60 * 24 * 6), host: "vscode", where: "VS Code",
+    brief: "The example gallery builds cleanly.", xmit: ["All 18 examples render."] },
+  { id: "s12", realm: "prism", callsign: "prism-01", model: "sonnet", state: "counsel", since: m(0), host: "cmux", where: "cmux · prism / pane 1", hidden: true,
+    brief: "A new session in ~/projects/prism wants to confirm the design-token naming before scaffolding.",
+    xmit: ["Before I scaffold: should tokens use <code>color.brand.primary</code> or <code>brand-primary</code>?"] },
 ];
 const RANK = {
-  haiku:  { title: "RECRUIT",  abbr: "RCT", model: "Haiku 4.5",  uni: "#8cb453", uniS: "#5f8a33", head: "helmet", helm: "#6f9440" },
-  sonnet: { title: "SERGEANT", abbr: "SGT", model: "Sonnet 5",   uni: "#6b8f3e", uniS: "#48682a", head: "helmet", helm: "#4c6a2b", chevrons: true },
-  opus:   { title: "CAPTAIN",  abbr: "CPT", model: "Opus 5.5",   uni: "#55663f", uniS: "#3a4729", head: "cap",    helm: "#2f3b26", bars: true },
-  fable:  { title: "COMMANDO", abbr: "CDO", model: "Fable 5.1",  uni: "#3b443c", uniS: "#252c27", head: "beret",  helm: "#b3261e", shades: true },
+  haiku:  { title: "Apprentice", model: "Haiku 4.5" },
+  sonnet: { title: "Magician",   model: "Sonnet 5" },
+  opus:   { title: "Sorcerer",   model: "Opus 5.5" },
+  fable:  { title: "Archmage",   model: "Fable 5.1" },
 };
 const STATE = {
-  orders:  { label: "AWAITING ORDERS",  short: "ORDERS",  cls: "alert", glyph: "!",  feed: "!" },
-  clear:   { label: "NEEDS CLEARANCE",  short: "CLEAR?",  cls: "clear", glyph: "?",  feed: "?" },
-  mission: { label: "ON MISSION",       short: "ACTIVE",  cls: "radio", glyph: "…",  feed: "»" },
-  ease:    { label: "AT EASE",          short: "IDLE",    cls: "ease",  glyph: "z",  feed: "·" },
+  counsel: { label: "Seeks counsel", chip: "COUNSEL", cls: "counsel", glyph: "!", feed: "!" },
+  seal:    { label: "Awaits your seal", chip: "SEAL?",  cls: "seal",    glyph: "?", feed: "?" },
+  cast:    { label: "Casting",         chip: "CASTING", cls: "cast",    glyph: "✦", feed: "✦" },
+  rest:    { label: "Meditating",      chip: "RESTING", cls: "rest",    glyph: "z", feed: "·" },
 };
-const needsYou = s => s.state === "orders" || s.state === "clear";
+const needsYou = s => s.state === "counsel" || s.state === "seal";
 
-/* ===================== pixel sprites (procedural, 20×22 grid) ===================== */
-const INK = "#1a1c2c", SKIN = "#f1c27d", BOOT = "#3b2a20", BELT = "#2b2b1e", GOLD = "#f4c542";
-function soldierRects(rankKey, state, f) {
-  const r = RANK[rankKey], out = [];
-  const R = (x, y, w, h, c) => out.push([x, y, w, h, c]);
-  const sit = state === "ease";
-  const dy = (state === "mission" || state === "ease") ? 0 : f % 2;   // breathing bob
-  const y0 = (sit ? 3 : 0) + dy;
-  // legs
-  if (sit) { R(4, 16, 9, 2, r.uniS); R(3, 17, 2, 2, BOOT); R(12, 17, 2, 2, BOOT); }
-  else { R(5, 14, 2, 3, r.uniS); R(9, 14, 2, 3, r.uniS); R(4, 17, 3, 2, BOOT); R(9, 17, 3, 2, BOOT); }
-  // torso
-  R(4, 8 + y0, 8, 6, r.uni); R(4, 12 + y0, 8, 1, BELT); R(7, 12 + y0, 2, 1, GOLD);
-  if (r.bars) { R(4, 8 + y0, 2, 1, GOLD); R(10, 8 + y0, 2, 1, GOLD); }
-  if (r.shades) { R(5, 9 + y0, 1, 1, "#8a6a2a"); R(6, 10 + y0, 1, 1, "#8a6a2a"); R(7, 11 + y0, 1, 1, "#8a6a2a"); R(9, 9 + y0, 1, 1, "#8a6a2a"); R(10, 10 + y0, 1, 1, "#8a6a2a"); }
-  // left arm
-  if (state === "clear") { R(2, 3 + y0, 2, 5, r.uni); R(2, 2 + y0, 2, 1, SKIN); }
-  else { R(2, 8 + y0, 2, 5, r.uni); R(2, 13 + y0, 2, 1, SKIN); if (r.chevrons) { R(2, 9 + y0, 2, 1, GOLD); R(2, 11 + y0, 2, 1, GOLD); } }
-  // right arm by state
-  if (state === "orders") {
-    if (f % 2) { R(12, 3 + y0, 2, 5, r.uni); R(12, 2 + y0, 2, 1, SKIN); }
-    else { R(12, 5 + y0, 2, 3, r.uni); R(14, 3 + y0, 2, 3, r.uni); R(14, 2 + y0, 2, 1, SKIN); }
-  } else if (state === "clear") { R(12, 3 + y0, 2, 5, r.uni); R(12, 2 + y0, 2, 1, SKIN); }
-  else if (state === "mission") {
-    R(12, 9 + y0, 3, 2, r.uni); R(15, 9 + y0 + (f % 2), 1, 1, SKIN);
-    // field radio
-    R(14, 11, 5, 5, "#4d5340"); R(15, 12, 3, 1, "#2a2e22"); R(15, 14, 1, 1, f % 2 ? "#e5483a" : "#5a2a2a"); R(17, 14, 1, 1, "#59c3e6");
-    R(18, 5, 1, 6, "#2a2e22"); R(18, 4, 1, 1, f % 2 ? "#59c3e6" : "#2a2e22");
-  } else { R(12, 8 + y0, 2, 5, r.uni); R(12, 13 + y0, 2, 1, SKIN); }
-  // head
-  R(5, 3 + y0, 6, 5, SKIN);
-  if (r.shades) { R(5, 5 + y0, 6, 1, "#111"); R(6, 5 + y0, 1, 1, "#5d6b8a"); }
-  else { R(6, 5 + y0, 1, 1, INK); R(9, 5 + y0, 1, 1, INK); }
-  if (state === "orders" && f % 2) R(7, 7 + y0, 2, 1, "#8a3b2a");
-  // headgear
-  if (r.head === "helmet") { R(5, 1 + y0, 6, 1, r.helm); R(4, 2 + y0, 8, 2, r.helm); R(4, 4 + y0, 1, 2, r.helm); R(11, 4 + y0, 1, 2, r.helm); R(6, 1 + y0, 2, 1, "rgba(255,255,255,.25)"); }
-  if (r.head === "cap") { R(5, 0 + y0, 6, 2, r.helm); R(4, 2 + y0, 8, 1, r.helm); R(4, 3 + y0, 9, 1, "#151a12"); R(7, 0 + y0, 2, 1, GOLD); }
-  if (r.head === "beret") { R(5, 1 + y0, 5, 1, r.helm); R(4, 2 + y0, 7, 1, r.helm); R(10, 3 + y0, 2, 1, r.helm); R(5, 2 + y0, 1, 1, GOLD); }
+/* realm customisation persists per viewer (prototype convenience only) */
+let REALMS = structuredClone(DEFAULT_REALMS);
+try { const saved = JSON.parse(localStorage.getItem("arcanum.realms") || "null"); if (saved) REALMS = saved; } catch (e) {}
+function saveRealms() { try { localStorage.setItem("arcanum.realms", JSON.stringify(REALMS)); } catch (e) {} }
+const visibleRealms = () => REALMS.filter(r => !r.undiscovered);
+const realmOf = id => REALMS.find(r => r.id === id);
+const troopsOf = id => SESSIONS.filter(s => s.realm === id && !s.hidden);
+
+/* ===================== pixel art ===================== */
+const INK = "#120f22", SKIN = "#f1c27d", GOLD = "#f2c14e", WOOD = "#6b4a2b";
+const ROBES = {
+  haiku:  { robe: "#8a7a5c", shade: "#675a42", hat: null,      gem: "#ffe9a8" },
+  sonnet: { robe: "#3b5bdb", shade: "#2a43a8", hat: "#3b5bdb", gem: "#6fe3ff", band: GOLD },
+  opus:   { robe: "#6b3fa0", shade: "#4c2a78", hat: "#6b3fa0", gem: "#ff7be5", stars: true, trim: GOLD },
+  fable:  { robe: "#e8e4f0", shade: "#b4abc9", hat: "#e8e4f0", gem: "#7ff0ff", beard: true, trim: "#7ff0ff" },
+};
+function mageRects(model, state, f) {
+  const r = ROBES[model], out = [], R = (x, y, w, h, c) => out.push([x, y, w, h, c]);
+  const rest = state === "rest";
+  const dy = rest ? 2 : (state === "cast" ? 0 : f % 2);
+  // robe (trapezoid) + hem
+  R(6, 8 + dy, 5, 1, r.robe); R(5, 9 + dy, 7, 2, r.robe); R(4, 11 + dy, 9, 3, r.robe); R(3, 14 + dy, 11, 4 - (rest ? 1 : 0), r.robe);
+  R(3, 17 + dy - (rest ? 1 : 0), 11, 1, r.shade);
+  if (r.trim) R(8, 9 + dy, 1, 8 - (rest ? 1 : 0), r.trim);
+  R(5, 12 + dy, 7, 1, r.shade);
+  if (!rest) { R(5, 18, 2, 1, INK); R(10, 18, 2, 1, INK); }
+  // left sleeve / hand (holds a sealed scroll when asking for permission)
+  if (state === "seal") { R(1, 10 + dy, 4, 2, r.shade); R(0, 9 + dy, 3, 4, "#efe3c2"); R(1, 11 + dy, 1, 1, "#c0392b"); }
+  else { R(3, 10 + dy, 2, 3, r.shade); R(3, 13 + dy, 2, 1, SKIN); }
+  // staff (apprentice gets a wand)
+  const raise = state === "counsel" ? (f % 2 ? 3 : 1) : 0;
+  if (model === "haiku") {
+    R(12, 10 + dy, 2, 2, r.shade); R(14, 7 + dy - raise, 1, 5, WOOD);
+    R(14, 6 + dy - raise, 1, 1, state === "cast" && f % 2 ? "#fff" : r.gem);
+  } else {
+    R(12, 10 + dy, 2, 2, r.shade); R(14, 4 + dy - raise, 1, 15 - (rest ? 3 : 0), WOOD);
+    R(13, 2 + dy - raise, 3, 2, state === "cast" && f % 2 ? "#ffffff" : r.gem);
+    if (model === "fable") { R(13, 1 + dy - raise, 1, 1, WOOD); R(15, 1 + dy - raise, 1, 1, WOOD); }
+  }
+  if (state === "cast") {                                    // sparkles that move each frame
+    const sp = [[16, 0], [12, 1], [17, 4], [11, 3], [16, 6]];
+    for (let i = 0; i < 2; i++) { const [x, y] = sp[(f + i * 2) % sp.length]; R(x, y + dy, 1, 1, r.gem); }
+  }
+  // face
+  R(6, 5 + dy, 5, 3, SKIN);
+  if (rest) { R(7, 6 + dy, 1, 1, "#7a5a40"); R(9, 6 + dy, 1, 1, "#7a5a40"); }
+  else { R(7, 6 + dy, 1, 1, INK); R(9, 6 + dy, 1, 1, INK); }
+  if (r.beard) { R(6, 7 + dy, 5, 3, "#f4f4f8"); R(7, 10 + dy, 3, 1, "#f4f4f8"); R(8, 11 + dy, 1, 1, "#f4f4f8"); }
+  else if (state === "counsel" && f % 2) R(8, 7 + dy, 1, 1, "#8a3b2a");
+  // headwear
+  if (!r.hat) { R(6, 3 + dy, 5, 1, r.robe); R(5, 4 + dy, 7, 1, r.robe); R(5, 5 + dy, 1, 3, r.robe); R(11, 5 + dy, 1, 3, r.robe); }
+  else {
+    const tip = model === "fable" ? -1 : 0;
+    R(10, 0 + dy + tip, 1, 1, r.hat); R(9, 1 + dy + tip, 2, 1, r.hat); R(8, 2 + dy, 3, 1, r.hat); R(7, 3 + dy, 4, 1, r.hat); R(4, 4 + dy, 9, 1, r.hat);
+    if (model === "fable") R(11, -1 + dy + tip, 1, 1, r.hat);
+    if (r.band) R(7, 3 + dy, 4, 1, r.band);
+    if (r.stars) { R(9, 2 + dy, 1, 1, GOLD); R(7, 3 + dy, 1, 1, GOLD); }
+  }
   return out;
 }
 function paint(canvas, rects, scale) {
   const ctx = canvas.getContext("2d");
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false; ctx.setTransform(scale, 0, 0, scale, scale, scale);
-  ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.fillRect(2, 19, 14, 2);
-  ctx.fillStyle = INK;                                       // 1px outline: silhouette at 4 offsets
+  ctx.imageSmoothingEnabled = false; ctx.setTransform(scale, 0, 0, scale, scale, scale * 2);
+  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(2, 19, 14, 1);
+  ctx.fillStyle = INK;                                               // 1px outline: silhouette at 4 offsets
   for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) for (const [x, y, w, h] of rects) ctx.fillRect(x + ox, y + oy, w, h);
   for (const [x, y, w, h, c] of rects) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
 }
 const sprites = new Set();
-function makeSoldier(s, scale) {
-  const c = document.createElement("canvas"); c.width = 21 * scale; c.height = 23 * scale;
-  c.setAttribute("role", "img"); c.setAttribute("aria-label", `${RANK[s.model].title} ${s.callsign}, ${STATE[s.state].label}`);
-  const spr = { c, s, scale }; sprites.add(spr); paint(c, soldierRects(s.model, s.state, 0), scale);
+function makeMage(s, scale) {
+  const c = document.createElement("canvas"); c.width = 20 * scale; c.height = 23 * scale;
+  c.setAttribute("role", "img"); c.setAttribute("aria-label", `${RANK[s.model].title} ${s.callsign}: ${STATE[s.state].label}`);
+  sprites.add({ c, s, scale }); paint(c, mageRects(s.model, s.state, 0), scale); return c;
+}
+
+function landmarkRects(kind, banner) {
+  const out = [], R = (x, y, w, h, c) => out.push([x, y, w, h, c]);
+  const STONE = "#9a96a8", STONE_D = "#6e6a80";
+  if (kind === "castle") { R(2, 7, 12, 7, STONE); R(2, 5, 2, 2, STONE); R(6, 5, 2, 2, STONE); R(10, 5, 2, 2, STONE); R(12, 5, 2, 2, STONE); R(6, 10, 4, 4, INK); R(4, 2, 1, 4, INK); R(5, 2, 3, 2, banner); R(2, 13, 12, 1, STONE_D); }
+  if (kind === "tower") { R(5, 4, 6, 10, STONE); R(4, 3, 8, 1, STONE_D); R(6, 1, 4, 2, banner); R(7, 0, 2, 1, banner); R(7, 6, 2, 2, "#f2c14e"); R(7, 11, 2, 3, INK); }
+  if (kind === "grove") { R(1, 6, 6, 6, "#2f7a3a"); R(9, 5, 6, 7, "#2f7a3a"); R(4, 3, 8, 6, "#3f9a4a"); R(7, 9, 2, 5, WOOD); R(2, 12, 2, 2, WOOD); R(12, 12, 2, 2, WOOD); R(6, 4, 1, 1, banner); R(10, 6, 1, 1, banner); }
+  if (kind === "cavern") { R(1, 7, 14, 7, "#5b4e7a"); R(3, 5, 10, 2, "#5b4e7a"); R(5, 4, 6, 1, "#5b4e7a"); R(6, 9, 4, 5, INK); R(2, 5, 1, 3, "#7ff0ff"); R(13, 6, 1, 3, "#ff7be5"); R(11, 3, 1, 2, banner); }
+  if (kind === "volcano") { R(1, 10, 14, 4, "#4a3a3a"); R(3, 7, 10, 3, "#5a4444"); R(5, 4, 6, 3, "#6a5050"); R(6, 3, 4, 1, "#ff6a2a"); R(7, 4, 1, 3, "#ff6a2a"); R(6, 0, 2, 2, "#8a8a99"); R(9, 1, 2, 1, "#8a8a99"); R(12, 11, 1, 1, banner); }
+  if (kind === "pyramid") { for (let i = 0; i < 7; i++) R(7 - i, 7 + i, 2 + i * 2, 1, i % 2 ? "#d4b06a" : "#e6c47c"); R(7, 7, 2, 1, banner); R(7, 11, 2, 3, INK); }
+  if (kind === "spire") { R(7, 0, 2, 3, "#d8f4ff"); R(6, 3, 4, 4, "#bfe8fb"); R(5, 7, 6, 7, "#a6dbf3"); R(3, 10, 2, 4, "#bfe8fb"); R(11, 9, 2, 5, "#bfe8fb"); R(7, 4, 1, 6, "#ffffff"); R(7, 11, 2, 3, banner); }
+  if (kind === "village") { R(1, 8, 6, 6, "#c9a27a"); R(0, 6, 8, 2, banner); R(2, 5, 4, 1, banner); R(3, 11, 2, 3, INK); R(9, 9, 6, 5, "#c9a27a"); R(8, 7, 8, 2, banner); R(10, 6, 4, 1, banner); R(11, 11, 2, 3, INK); }
+  return out;
+}
+function makeLandmark(kind, banner, scale) {
+  const c = document.createElement("canvas"); c.width = 18 * scale; c.height = 17 * scale; c.setAttribute("aria-hidden", "true");
+  const ctx = c.getContext("2d"); ctx.imageSmoothingEnabled = false; ctx.setTransform(scale, 0, 0, scale, scale, scale);
+  const rects = landmarkRects(kind, banner);
+  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(1, 14, 15, 1);
+  ctx.fillStyle = INK; for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) for (const [x, y, w, h] of rects) ctx.fillRect(x + ox, y + oy, w, h);
+  for (const [x, y, w, h, col] of rects) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
   return c;
 }
-function drawTent(color) {
-  const c = document.createElement("canvas"), S = 3; c.width = 22 * S; c.height = 18 * S; c.className = "tent";
-  const ctx = c.getContext("2d"); ctx.scale(S, S);
-  const R = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
-  R(4, 1, 1, 9, INK); R(5, 1, 5, 3, color); R(5, 4, 3, 1, color);            // flag
-  for (let i = 0; i < 7; i++) R(10 - i, 10 + i, 2 * i + 3, 1, i % 2 ? "#a08a52" : "#b59c5e"); // tent
-  R(10, 12, 3, 5, "#3d3220"); R(3, 17, 17, 1, "rgba(0,0,0,.25)");
+
+/* ---- terrain: land grows around each realm; biome = nearest realm (Voronoi), so realms are regions ---- */
+const BIOME = {
+  meadow:   ["#6fb24a", "#5ea13e", "#82c25a"],
+  forest:   ["#2f7a3a", "#25632f", "#3f8f45"],
+  highland: ["#8a8f5a", "#757a4a", "#9aa06a"],
+  crystal:  ["#6a5a9a", "#58488a", "#7ff0ff"],
+  ash:      ["#4a3a3a", "#3a2c2c", "#ff6a2a"],
+  desert:   ["#e0c07a", "#d4b06a", "#ecd08e"],
+  snow:     ["#e8eef5", "#cfd9e6", "#ffffff"],
+};
+function hash(x, y) { let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function noise(x, y, s) {
+  const xi = Math.floor(x / s), yi = Math.floor(y / s), fx = x / s - xi, fy = y / s - yi;
+  const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+  const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+const TW = 96, TH = 60;
+function renderTerrain() {
+  const c = document.createElement("canvas"); c.width = TW; c.height = TH; c.className = "terrain";
+  c.setAttribute("role", "img"); c.setAttribute("aria-label", "World map of your realms");
+  const ctx = c.getContext("2d");
+  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
+    let best = null, bd = 1e9, land = 0;
+    for (const r of REALMS) {
+      const dx = x - r.pos.x / 100 * TW, dy = (y - r.pos.y / 100 * TH) * 1.25, d = Math.hypot(dx, dy);
+      land = Math.max(land, Math.exp(-((d / 11) ** 2)));
+      if (d < bd) { bd = d; best = r; }
+    }
+    land += (noise(x, y, 6) - .5) * .55 + (noise(x + 99, y, 2) - .5) * .25;
+    const n = hash(x, y);
+    let col;
+    if (land < .3) col = n < .04 ? "#2a4c86" : "#1d3b6e";
+    else if (land < .42) col = n < .1 ? "#3d6fb0" : "#2f5fa0";
+    else if (land < .47) col = "#e6d28f";
+    else if (best.undiscovered) col = n < .5 ? "#3a3550" : (n < .8 ? "#46405f" : "#524b6e");
+    else { const pal = BIOME[LANDMARKS[best.landmark].biome]; col = n < .62 ? pal[0] : (n < .92 ? pal[1] : pal[2]); }
+    ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1);
+  }
   return c;
 }
-function tile(base, specks) {
+function tile(pal) {
   const c = document.createElement("canvas"); c.width = c.height = 16; const ctx = c.getContext("2d");
-  ctx.fillStyle = base; ctx.fillRect(0, 0, 16, 16);
-  let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
-  for (let i = 0; i < 14; i++) { ctx.fillStyle = specks[i % specks.length]; ctx.fillRect(rnd() * 16 | 0, rnd() * 16 | 0, 1, (rnd() * 2 | 0) + 1); }
+  ctx.fillStyle = pal[0]; ctx.fillRect(0, 0, 16, 16);
+  for (let i = 0; i < 18; i++) { ctx.fillStyle = i % 6 === 0 ? pal[2] : pal[1]; ctx.fillRect(hash(i, 3) * 16 | 0, hash(i, 7) * 16 | 0, 1, (hash(i, 11) * 2 | 0) + 1); }
   return `url(${c.toDataURL()})`;
 }
-document.documentElement.style.setProperty("--grass-tile", tile("#5c9a45", ["#4f8a3b", "#6fae54", "#4a823a"]));
-document.documentElement.style.setProperty("--sand-tile", tile("#d8c07a", ["#c9ae66", "#e3cf90"]));
 
 /* ===================== rendering ===================== */
-const $ = s => document.querySelector(s), esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-function ago(t) { const d = (NOW - t) / 60000 + (Date.now() - NOW) / 60000; if (d < 1) return "now"; if (d < 60) return `${d | 0}m`; if (d < 1440) return `${(d / 60) | 0}h`; return `${(d / 1440) | 0}d`; }
+const $ = s => document.querySelector(s), esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function ago(t) { const d = (Date.now() - t) / 60000; if (d < 1) return "now"; if (d < 60) return `${d | 0}m`; if (d < 1440) return `${(d / 60) | 0}h`; return `${(d / 1440) | 0}d`; }
 function clock(t) { const d = new Date(t); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; }
-const plain = h => h.replace(/<[^>]+>/g, "");
-const ui = { view: "hq", project: null, session: null, hqSel: 0 };
+const ui = { view: "map", realm: null, session: null, mapSel: 0, charter: false };
+const live = () => SESSIONS.filter(s => !s.hidden);
 
 function renderStats() {
-  const w = SESSIONS.filter(s => s.state === "orders").length, c = SESSIONS.filter(s => s.state === "clear").length, a = SESSIONS.filter(s => s.state === "mission").length;
-  $("#stats").innerHTML = `<span class="stat"><b>${PROJECTS.length}</b>OUTPOSTS</span><span class="stat"><b>${SESSIONS.length}</b>TROOPS</span>
-    <span class="stat alert"><b>${w}</b>AWAITING ORDERS</span><span class="stat clear"><b>${c}</b>NEED CLEARANCE</span><span class="stat radio"><b>${a}</b>ON MISSION</span>`;
+  const L = live(), n = k => L.filter(s => s.state === k).length;
+  $("#stats").innerHTML = `<span class="stat"><b>${visibleRealms().length}</b>REALMS</span><span class="stat"><b>${L.length}</b>MAGES</span>
+    <span class="stat counsel"><b>${n("counsel")}</b>SEEK COUNSEL</span><span class="stat seal"><b>${n("seal")}</b>AWAIT A SEAL</span><span class="stat cast"><b>${n("cast")}</b>CASTING</span>`;
 }
 function renderFeed() {
-  const items = SESSIONS.filter(s => s.state !== "ease").sort((a, b) => b.since - a.since).slice(0, 5);
+  const items = live().filter(s => s.state !== "rest").sort((a, b) => b.since - a.since).slice(0, 5);
   $("#feed").innerHTML = items.map(s => `<li><button data-go="${s.id}">
-      <span class="t">${clock(s.since)}</span><span class="k ${STATE[s.state].cls}">${STATE[s.state].feed}</span>
-      <span class="who">${esc(s.project)}</span><span class="msg">${RANK[s.model].abbr} ${esc(s.callsign)}: ${esc(s.brief)}</span></button></li>`).join("");
+      <span class="t">${clock(s.since)}</span><span class="k c-${STATE[s.state].cls}">${STATE[s.state].feed}</span>
+      <span class="who">${esc(realmOf(s.realm).name)}</span><span class="msg">${esc(s.callsign)}: ${esc(s.brief)}</span></button></li>`).join("");
 }
-function projectsOrdered() {   // chrono: outposts with someone waiting on you first, newest request first
-  const latestNeed = p => Math.max(0, ...SESSIONS.filter(s => s.project === p.id && needsYou(s)).map(s => s.since));
-  const latestAny = p => Math.max(0, ...SESSIONS.filter(s => s.project === p.id).map(s => s.since));
-  return [...PROJECTS].sort((a, b) => (latestNeed(b) - latestNeed(a)) || (latestAny(b) - latestAny(a)));
+function realmsOrdered() {   // time order: realms with someone waiting on you first, newest request first
+  const t = (r, f) => Math.max(0, ...troopsOf(r.id).filter(f).map(s => s.since));
+  return [...visibleRealms()].sort((a, b) => (t(b, needsYou) - t(a, needsYou)) || (t(b, () => true) - t(a, () => true)));
 }
-function renderHQ() {
-  sprites.clear();
-  const ps = projectsOrdered();
-  const v = $("#view"); v.innerHTML = `<div class="map-h"><h2>THEATRE MAP</h2>
-    <span class="hint"><kbd>←→↑↓</kbd> select &nbsp;<kbd>ENTER</kbd> enter outpost &nbsp;<kbd>N</kbd> next request</span></div><div class="map" id="map"></div>`;
-  ps.forEach((p, i) => {
-    const troops = SESSIONS.filter(s => s.project === p.id), need = troops.filter(needsYou);
-    const orders = need.filter(s => s.state === "orders").length, clear = need.length - orders;
-    const latest = [...troops].sort((a, b) => b.since - a.since)[0];
-    const b = document.createElement("button"); b.className = "outpost" + (i === ui.hqSel ? " sel" : ""); b.dataset.project = p.id;
-    b.setAttribute("aria-label", `${p.id}: ${troops.length} troops, ${need.length} waiting on you`);
-    b.innerHTML = `<div class="banner"><span class="name"><span class="flag" style="background:${p.flag}"></span>${esc(p.id)}</span>
-      ${need.length ? `<span class="badge${orders ? "" : " clear"}">${orders ? "! " + orders : ""}${orders && clear ? " " : ""}${clear ? "? " + clear : ""}</span>` : `<span class="badge none">ALL QUIET</span>`}</div>
-      <div class="field"></div>
-      <div class="foot"><span class="latest">${esc(latest.brief)}</span><span class="ago">${ago(latest.since)}</span></div>`;
-    const field = b.querySelector(".field"); field.appendChild(drawTent(p.flag));
-    for (const s of troops) {
-      const u = document.createElement("div"); u.className = "unit"; u.appendChild(makeSoldier(s, 3));
-      u.insertAdjacentHTML("afterbegin", `<span class="bubble ${STATE[s.state].cls}">${STATE[s.state].glyph}</span>`); field.appendChild(u);
-    }
-    b.onclick = () => openProject(p.id); b.onfocus = () => { ui.hqSel = i; markHQ(); };
-    $("#map").appendChild(b);
+function renderMap() {
+  sprites.clear(); ui.view = "map";
+  const canDiscover = REALMS.some(r => r.undiscovered);
+  $("#view").innerHTML = `<div class="map-h"><h2>The Known Realms</h2><div class="right">
+      <span class="hint"><kbd>←</kbd><kbd>→</kbd> select <kbd>⏎</kbd> fast travel <kbd>N</kbd> next request</span>
+      ${canDiscover ? `<button class="btn ghost" id="discover">Simulate a discovery</button>` : ""}</div></div>
+    <section class="px worldframe"><div class="world" id="world"></div>
+    <div class="legend"><span><span class="c-counsel">!</span> seeks counsel (wants a reply)</span><span><span class="c-seal">?</span> awaits your seal (permission)</span><span><span class="c-cast">✦</span> casting (working)</span><span>fog = undiscovered</span></div></section>`;
+  const w = $("#world"); w.appendChild(renderTerrain());
+  const order = realmsOrdered();
+  order.forEach((r, i) => {
+    const t = troopsOf(r.id), n = k => t.filter(s => s.state === k).length;
+    const b = document.createElement("button"); b.className = "site" + (i === ui.mapSel ? " sel" : ""); b.dataset.realm = r.id;
+    b.style.left = r.pos.x + "%"; b.style.top = r.pos.y + "%";
+    b.setAttribute("aria-label", `${r.name}: ${t.length} mages, ${t.filter(needsYou).length} waiting on you`);
+    b.appendChild(makeLandmark(r.landmark, r.banner, 3));
+    const pins = [n("counsel") && `<i class="counsel">!${n("counsel")}</i>`, n("seal") && `<i class="seal">?${n("seal")}</i>`, n("cast") && `<i class="cast">✦${n("cast")}</i>`].filter(Boolean).join("");
+    b.insertAdjacentHTML("beforeend", `<span class="tag">${r.fresh ? `<span class="new">NEW</span>` : ""}${esc(r.name)}<span class="pin">${pins}</span></span>`);
+    b.onclick = () => travel(r.id); b.onfocus = () => { ui.mapSel = i; markMap(); };
+    w.appendChild(b);
   });
+  const d = $("#discover"); if (d) d.onclick = discover;
 }
-function markHQ() { document.querySelectorAll(".outpost").forEach((el, i) => el.classList.toggle("sel", i === ui.hqSel)); }
-function openProject(pid, sid) {
-  const troops = SESSIONS.filter(s => s.project === pid).sort((a, b) => (needsYou(b) - needsYou(a)) || (b.since - a.since));
-  ui.view = "op"; ui.project = pid; ui.session = sid || troops[0].id; renderOP();
+function markMap() { document.querySelectorAll(".site").forEach((el, i) => el.classList.toggle("sel", i === ui.mapSel)); }
+function discover() {
+  const r = REALMS.find(x => x.undiscovered); if (!r) return;
+  r.undiscovered = false; r.fresh = true; SESSIONS.filter(s => s.realm === r.id).forEach(s => { s.hidden = false; s.since = Date.now(); });
+  saveRealms(); toast(`NEW REALM DISCOVERED: ${r.name.toUpperCase()} (${r.lands[0]})`);
+  ui.mapSel = 0; renderStats(); renderFeed(); renderMap();
 }
-function renderOP() {
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function travel(rid, sid) {
+  const r = realmOf(rid), w = $("#world");
+  const go = () => openRealm(rid, sid);
+  if (!w || still) return go();
+  w.style.transformOrigin = `${r.pos.x}% ${r.pos.y}%`; w.classList.add("zoom"); setTimeout(go, 500);
+}
+function openRealm(rid, sid) {
+  const r = realmOf(rid); r.fresh = false;
+  const t = troopsOf(rid).sort((a, b) => (needsYou(b) - needsYou(a)) || (b.since - a.since));
+  ui.view = "realm"; ui.realm = rid; ui.session = sid || (t[0] && t[0].id); ui.charter = false; renderRealm(true);
+}
+function renderRealm(entering) {
   sprites.clear();
-  const troops = SESSIONS.filter(s => s.project === ui.project).sort((a, b) => (needsYou(b) - needsYou(a)) || (b.since - a.since));
-  const v = $("#view");
-  v.innerHTML = `<div class="op-top"><button class="back" id="back">◀ HQ</button><h2>OUTPOST · ${esc(ui.project)}</h2>
-    <span class="hint"><kbd>↑↓</kbd> trooper &nbsp;<kbd>R</kbd> reply &nbsp;<kbd>ESC</kbd> back</span></div>
-    <div class="op"><section class="roster px" aria-label="Squad"><div class="panel-h">SQUAD · ${troops.length}</div><div id="roster"></div></section>
-    <section class="comms px" id="comms" aria-live="polite"></section></div>`;
-  $("#back").onclick = goHQ;
+  const r = realmOf(ui.realm);
+  const t = troopsOf(ui.realm).sort((a, b) => (needsYou(b) - needsYou(a)) || (b.since - a.since));
+  document.documentElement.style.setProperty("--biome-tile", tile(BIOME[LANDMARKS[r.landmark].biome]));
+  $("#view").innerHTML = `<div class="${entering ? "realm-in" : ""}" style="display:grid;gap:12px">
+    <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${r.banner}">${esc(r.name)}</h2>
+      <span class="lands">${r.lands.length} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} mages</span>
+      <div class="right"><span class="hint"><kbd>↑</kbd><kbd>↓</kbd> mage <kbd>R</kbd> reply <kbd>esc</kbd> map</span>
+      <button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button></div></div>
+    ${ui.charter ? `<section class="px charter" id="charter"></section>` : ""}
+    <section class="px scene" id="scene" aria-label="Mages in ${esc(r.name)}"></section>
+    ${t.length ? `<div class="op"><section class="roster px" aria-label="Mages"><div class="lbl">Circle · ${t.length}</div><div id="roster"></div></section>
+      <section class="comms px" id="comms" aria-live="polite"></section></div>` : `<section class="px comms"><p>No mages in this realm right now.</p></section>`}</div>`;
+  $("#back").onclick = goMap;
+  $("#editRealm").onclick = () => { ui.charter = !ui.charter; renderRealm(); };
+  const sc = $("#scene"); const lm = makeLandmark(r.landmark, r.banner, 7); lm.className = "landmark"; sc.appendChild(lm);
+  t.forEach(s => {
+    const b = document.createElement("button"); b.className = "mage" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
+    b.appendChild(makeMage(s, 4));
+    b.insertAdjacentHTML("afterbegin", `<span class="bubble ${STATE[s.state].cls}">${STATE[s.state].glyph}</span>`);
+    b.insertAdjacentHTML("beforeend", `<span class="name">${esc(s.callsign)}</span>`);
+    b.onclick = () => { ui.session = s.id; renderRealm(); };
+    sc.appendChild(b);
+  });
   const ro = $("#roster");
-  troops.forEach(s => {
-    const b = document.createElement("button"); b.className = "trooper" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
-    b.innerHTML = `<span class="pic"></span><span><span class="cs">${esc(s.callsign)}</span><br><span class="rk">${RANK[s.model].title} · ${ago(s.since)}</span></span>
-      <span class="st ${STATE[s.state].cls}">${STATE[s.state].short}</span>`;
-    b.querySelector(".pic").appendChild(makeSoldier(s, 3));
-    b.onclick = () => { ui.session = s.id; renderOP(); };
+  if (ro) t.forEach(s => {
+    const b = document.createElement("button"); b.className = "row" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
+    b.innerHTML = `<span><span class="cs">${esc(s.callsign)}</span><span class="rk">${RANK[s.model].title} · ${ago(s.since)}</span></span><span class="chip ${STATE[s.state].cls}">${STATE[s.state].chip}</span>`;
+    b.onclick = () => { ui.session = s.id; renderRealm(); };
     ro.appendChild(b);
   });
-  renderComms(SESSIONS.find(s => s.id === ui.session));
+  if (ui.charter) renderCharter(r);
+  const s = SESSIONS.find(x => x.id === ui.session); if (s && $("#comms")) renderComms(s);
+}
+function renderCharter(r) {
+  const others = visibleRealms().filter(x => x.id !== r.id);
+  const el = $("#charter");
+  el.innerHTML = `<h3>Realm charter</h3>
+    <p class="via" style="margin:0">New realms get a landmark and banner automatically when a repo is discovered. Change them here.</p>
+    <div class="grid">
+      <div><label class="lbl" for="rname">Name</label><input type="text" id="rname" value="${esc(r.name)}"></div>
+      <div><span class="lbl">Banner</span><div class="choices">${BANNERS.map(c => `<button class="sw" data-banner="${c}" style="background:${c}" aria-label="Banner ${c}" aria-pressed="${c === r.banner}"></button>`).join("")}</div></div>
+      <div style="grid-column:1/-1"><span class="lbl">Landmark</span><div class="choices" id="lmChoices"></div></div>
+      <div><span class="lbl">Lands (folders and repos in this realm)</span><ul class="landlist">${r.lands.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
+        <label class="lbl" for="merge">Absorb another realm</label>
+        <select id="merge"><option value="">Choose a realm…</option>${others.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join("")}</select></div>
+    </div>`;
+  const lc = $("#lmChoices");
+  for (const [k, v] of Object.entries(LANDMARKS)) {
+    const b = document.createElement("button"); b.className = "choice"; b.dataset.lm = k; b.setAttribute("aria-pressed", k === r.landmark);
+    b.appendChild(makeLandmark(k, r.banner, 2)); b.insertAdjacentHTML("beforeend", `<span>${v.label}</span>`); lc.appendChild(b);
+    b.onclick = () => { r.landmark = k; saveRealms(); renderRealm(); };
+  }
+  el.querySelectorAll("[data-banner]").forEach(b => b.onclick = () => { r.banner = b.dataset.banner; saveRealms(); renderRealm(); });
+  $("#rname").onchange = e => { r.name = e.target.value.trim() || r.name; saveRealms(); renderRealm(); renderFeed(); };
+  $("#merge").onchange = e => {
+    const o = realmOf(e.target.value); if (!o) return;
+    r.lands.push(...o.lands); SESSIONS.filter(s => s.realm === o.id).forEach(s => s.realm = r.id);
+    REALMS = REALMS.filter(x => x.id !== o.id); saveRealms(); toast(`${o.name.toUpperCase()} ABSORBED INTO ${r.name.toUpperCase()}`);
+    renderStats(); renderFeed(); renderRealm();
+  };
 }
 function renderComms(s) {
-  const r = RANK[s.model], st = STATE[s.state];
+  const st = STATE[s.state], relay = s.host !== "cmux";
   const c = $("#comms");
   c.innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
       <h3>${esc(s.callsign)}</h3>
-      <dl><dt>RANK</dt><dd>${r.title} · ${r.model}</dd><dt>STATUS</dt><dd><span class="st ${st.cls}" style="font-family:var(--f-display);font-size:8px;padding:3px 5px">${st.label}</span> for ${ago(s.since)}</dd>
-      <dt>POSITION</dt><dd>${esc(s.term)}</dd></dl></div></div>
-    <div class="paper"><span class="lbl">BRIEFING</span><p>${esc(s.brief)}</p></div>
-    <div class="paper xmit${s.state === "mission" ? " typing" : ""}"><span class="lbl">LAST TRANSMISSION</span>${s.xmit.map(p => `<p>${p}</p>`).join("")}</div>
-    ${s.state === "clear" ? `<div class="orders"><label>CLEARANCE REQUESTED</label><div class="req">${esc(s.req)}</div>
-      <div class="btns"><button class="btn" data-act="approve">APPROVE</button><button class="btn deny" data-act="deny">DENY</button>
-      <button class="btn alt" data-act="jump">JUMP TO TERMINAL</button></div></div>` :
-    `<form class="orders" id="orders"><label for="reply">ISSUE ORDERS</label>
-      <textarea id="reply" placeholder="${s.state === "mission" ? "Queue an order for when it's done…" : "Type your reply…"}"></textarea>
-      <div class="btns"><button class="btn" type="submit">SEND ORDERS</button><button class="btn alt" type="button" data-act="jump">JUMP TO TERMINAL</button>
-      <span class="hint"><kbd>⌘</kbd>+<kbd>ENTER</kbd> send</span></div></form>`}`;
-  $("#portrait").appendChild(makeSoldier(s, 6));
+      <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${RANK[s.model].model}</dd>
+      <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
+      <dt>DWELLS IN</dt><dd>${esc(s.where)}</dd></dl></div></div>
+    <div class="paper"><span class="lbl">The matter at hand</span><p>${esc(s.brief)}</p></div>
+    <div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${s.xmit.map(p => `<p>${p}</p>`).join("")}</div>
+    ${s.state === "seal" ? `<div class="orders"><span class="lbl">Asks for your seal to run</span><div class="req">${esc(s.req)}</div>
+      <div class="btns"><button class="btn" data-act="grant">Grant seal</button><button class="btn deny" data-act="refuse">Refuse</button>
+      <button class="btn alt" data-act="portal">Open portal</button></div></div>` :
+    `<form class="orders" id="orders"><label class="lbl" for="reply">Send word</label>
+      <textarea id="reply" placeholder="${s.state === "cast" ? "Queue word for when it finishes casting…" : "Type your reply…"}"></textarea>
+      <div class="via">${relay ? `This mage dwells in <b>${esc(s.where)}</b>, outside cmux, so your words go <b>by raven</b>: it is told the message is relayed from you, not typed in its terminal.` : `Your words are typed straight into its <b>cmux</b> pane, as if you were there.`}</div>
+      <div class="btns"><button class="btn" type="submit">${relay ? "Send by raven" : "Send word"}</button><button class="btn alt" type="button" data-act="portal">Open portal</button>
+      <span class="hint"><kbd>⌘</kbd>+<kbd>⏎</kbd> send</span></div></form>`}`;
+  $("#portrait").appendChild(makeMage(s, 6));
   const f = $("#orders");
   if (f) {
-    f.onsubmit = e => { e.preventDefault(); const t = $("#reply").value.trim(); if (!t) return toast("TYPE AN ORDER FIRST"); dispatchOrder(s, t); };
+    f.onsubmit = e => { e.preventDefault(); const t = $("#reply").value.trim(); if (!t) return toast("WRITE SOMETHING FIRST"); act(s, t, relay ? "SENT BY RAVEN" : "WORD SENT"); };
     $("#reply").onkeydown = e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) f.requestSubmit(); };
   }
   c.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
     const a = b.dataset.act;
-    if (a === "jump") return toast(`FOCUSING ${s.term.toUpperCase()}`);
-    if (a === "approve") dispatchOrder(s, null, "CLEARANCE GRANTED");
-    if (a === "deny") dispatchOrder(s, null, "CLEARANCE DENIED");
+    if (a === "portal") return toast(s.host === "cmux" ? `PORTAL OPENED: ${s.where.toUpperCase()}` : `PORTAL OPENED: ${s.where.toUpperCase()} (WINDOW ONLY)`);
+    act(s, null, a === "grant" ? "SEAL GRANTED" : "SEAL REFUSED");
   });
 }
-function dispatchOrder(s, text, msg) {
-  s.state = "mission"; s.since = Date.now();
-  s.xmit = [text ? `Roger that. Acting on: “${esc(text)}”` : msg === "CLEARANCE GRANTED" ? "Clearance received. Running it now." : "Understood, standing down that step."];
-  s.brief = text ? `Executing your orders: ${text}` : msg === "CLEARANCE GRANTED" ? "Permission granted; continuing." : "Permission denied; finding another route.";
-  toast(msg || `ORDERS SENT TO ${s.callsign.toUpperCase()}`);
-  renderStats(); renderFeed(); renderOP();
+function act(s, text, msg) {
+  s.state = "cast"; s.since = Date.now();
+  s.xmit = [text ? `Understood. Working on: “${esc(text)}”` : msg === "SEAL GRANTED" ? "Seal received. Running it now." : "Understood. I'll find another way."];
+  s.brief = text ? `Acting on your word: ${text}` : msg === "SEAL GRANTED" ? "Permission granted; continuing." : "Permission refused; finding another route.";
+  toast(`${msg} → ${s.callsign.toUpperCase()}`); renderStats(); renderFeed(); renderRealm();
 }
-function goHQ() { ui.view = "hq"; renderHQ(); const sel = document.querySelectorAll(".outpost")[ui.hqSel]; sel && sel.focus({ preventScroll: true }); }
-let tt; function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 1800); }
-
-/* jump to the next thing that needs you, newest first */
+function goMap() { renderMap(); const el = document.querySelectorAll(".site")[ui.mapSel]; el && el.focus({ preventScroll: true }); }
+let tt; function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2200); }
 function nextRequest() {
-  const q = SESSIONS.filter(needsYou).sort((a, b) => b.since - a.since); if (!q.length) return toast("NO ONE IS WAITING");
-  const i = ui.view === "op" ? (q.findIndex(s => s.id === ui.session) + 1) % q.length : 0;
-  openProject(q[i].project, q[i].id);
+  const q = live().filter(needsYou).sort((a, b) => b.since - a.since); if (!q.length) return toast("NO ONE IS WAITING ON YOU");
+  const i = ui.view === "realm" ? (q.findIndex(s => s.id === ui.session) + 1) % q.length : 0;
+  ui.view === "map" ? travel(q[i].realm, q[i].id) : openRealm(q[i].realm, q[i].id);
 }
 
-document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) { const s = SESSIONS.find(x => x.id === g.dataset.go); openProject(s.project, s.id); } });
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) { const s = SESSIONS.find(x => x.id === g.dataset.go); ui.view === "map" ? travel(s.realm, s.id) : openRealm(s.realm, s.id); } });
 document.addEventListener("keydown", e => {
-  if (e.target.matches("textarea, input")) { if (e.key === "Escape") e.target.blur(); return; }
+  if (e.target.matches("textarea, input, select")) { if (e.key === "Escape") e.target.blur(); return; }
   if (e.key === "n" || e.key === "N") return nextRequest();
-  if (ui.view === "hq") {
-    const n = document.querySelectorAll(".outpost").length, cols = Math.max(1, getComputedStyle($("#map")).gridTemplateColumns.split(" ").length);
-    const mv = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols }[e.key];
-    if (mv !== undefined) { e.preventDefault(); ui.hqSel = Math.min(n - 1, Math.max(0, ui.hqSel + mv)); markHQ(); document.querySelectorAll(".outpost")[ui.hqSel].focus(); }
+  if (ui.view === "map") {
+    const n = document.querySelectorAll(".site").length;
+    const mv = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (mv !== undefined) { e.preventDefault(); ui.mapSel = (ui.mapSel + mv + n) % n; markMap(); document.querySelectorAll(".site")[ui.mapSel].focus(); }
   } else {
-    if (e.key === "Escape") return goHQ();
+    if (e.key === "Escape") return goMap();
     if (e.key === "r" || e.key === "R") { const t = $("#reply"); if (t) { e.preventDefault(); t.focus(); } }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault(); const ids = [...document.querySelectorAll(".trooper")].map(b => b.dataset.session);
-      const i = ids.indexOf(ui.session) + (e.key === "ArrowDown" ? 1 : -1); if (ids[i]) { ui.session = ids[i]; renderOP(); document.querySelector(".trooper.sel").focus(); }
+      e.preventDefault(); const ids = [...document.querySelectorAll(".row")].map(b => b.dataset.session);
+      const i = ids.indexOf(ui.session) + (e.key === "ArrowDown" ? 1 : -1); if (ids[i]) { ui.session = ids[i]; renderRealm(); document.querySelector(".row.sel").focus(); }
     }
   }
 });
 
 /* animation clock: 2-frame sprite cycle */
-const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let frame = 0;
-const logoS = { id: "logo", model: "fable", state: "orders", callsign: "you" };
-paint($("#logoSprite"), soldierRects("fable", "orders", 0), 3);
+paint($("#logoSprite"), mageRects("fable", "cast", 0), 3);
 if (!still) setInterval(() => {
   frame++;
-  for (const sp of sprites) { if (!sp.c.isConnected) { sprites.delete(sp); continue; } paint(sp.c, soldierRects(sp.s.model, sp.s.state, frame + (sp.s.id.length % 2)), sp.scale); }
-  paint($("#logoSprite"), soldierRects("fable", frame % 6 < 3 ? "orders" : "ease", frame), 3);
+  for (const sp of sprites) { if (!sp.c.isConnected) { sprites.delete(sp); continue; } paint(sp.c, mageRects(sp.s.model, sp.s.state, frame + (sp.s.id.length % 2)), sp.scale); }
+  paint($("#logoSprite"), mageRects("fable", "cast", frame), 3);
 }, 420);
 
-renderStats(); renderFeed(); renderHQ();
+renderStats(); renderFeed(); renderMap();
 </script>
