@@ -17,6 +17,9 @@ test.each([
   ["idle", undefined, said("Which do you want?", 50, 100), "rest"],
   ["idle", undefined, said("Shall I proceed with the commit"), "counsel"],
   ["idle", undefined, {}, "rest"],
+  ["idle", undefined, said("Tick the ones you like and tell me here what you'd change."), "counsel"],
+  ["idle", undefined, said("I can cherry-pick it unless you'd rather keep everything on one branch."), "counsel"],
+  ["idle", undefined, said("Committed as a1b2c3d. The branch is pushed."), "rest"],
 ] as const)("%s/%s → %s", (status, waitingFor, t, expected) => {
   const r = classify(reg(status, waitingFor), t as TranscriptSummary);
   expect(r.state).toBe(expected);

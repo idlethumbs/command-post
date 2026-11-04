@@ -1,10 +1,11 @@
 import type { MageState, Model, RegistryEntry, TranscriptSummary } from "./types";
 
-const ASKS = /\b(shall i|should i|do you want|would you like|which (one|option)|let me know|your call|ok(ay)? to proceed|awaiting (your )?(input|decision|approval|feedback))\b/i;
+// Phrases that hand the turn back to you. Erring towards "counsel" is cheaper than missing a request.
+const ASKS = /\b(shall i|should i|do you want|want me to|would you like|if you'?d like|would you rather|you'?d rather|which (one|option)|let me know|tell me|your call|say the word|ok(ay)? to proceed|confirm|approve|pick|choose|awaiting (your )?(input|decision|approval|feedback))\b/i;
 
 export const asksSomething = (text: string) => {
-  const t = text.trim();
-  return t.endsWith("?") || ASKS.test(t.slice(-300));
+  const tail = text.trim().slice(-400);
+  return tail.includes("?") || ASKS.test(tail);
 };
 
 export function classify(e: RegistryEntry, t: TranscriptSummary): { state: MageState; since: number } {
