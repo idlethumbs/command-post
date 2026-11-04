@@ -2,13 +2,14 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { absorbRealm, loadConfig, saveConfig, updateRealm } from "./realms";
+import { MAX_IMAGE_BYTES, resolveImages, saveImage } from "./uploads";
 import type { Snapshot } from "./types";
 
 const TYPES: Record<string, string> = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".woff2": "font/woff2", ".woff": "font/woff", ".svg": "image/svg+xml", ".png": "image/png" };
 
 export interface PortalResult { ok: boolean; precision: "exact" | "app" | "none"; message: string }
-export interface ServerDeps { uiDir: string; fontDirs: string[]; arcanumDir: string; getSnapshot(): Snapshot; onConfigChange(): void; openPortal(sessionId: string): Promise<PortalResult | undefined>;
-  sendWord?(sessionId: string, text: string): Promise<{ ok: boolean; message: string } | undefined>;
+export interface ServerDeps { uploadsDir?: string; uiDir: string; fontDirs: string[]; arcanumDir: string; getSnapshot(): Snapshot; onConfigChange(): void; openPortal(sessionId: string): Promise<PortalResult | undefined>;
+  sendWord?(sessionId: string, text: string, images: string[]): Promise<{ ok: boolean; message: string } | undefined>;
   answerSeal?(sessionId: string, decision: "grant" | "refuse"): Promise<{ ok: boolean; message: string } | undefined>;
   readSeal?(sessionId: string): Promise<{ request: string; question: string } | undefined> }
 
@@ -67,12 +68,27 @@ export function createArcanumServer(d: ServerDeps) {
       const r = await d.openPortal(pm[1]).catch(e => ({ ok: false, precision: "none" as const, message: (e as Error).message }));
       return r ? send(res, 200, r) : send(res, 404, { error: "No live mage with that id." });
     }
+    if (p === "/api/uploads" && req.method === "POST") {
+      if (!d.uploadsDir) return send(res, 404, { error: "Uploads are off." });
+      const chunks: Buffer[] = []; let size = 0, tooBig = false;
+      await new Promise<void>(done => {
+        req.on("data", (c: Buffer) => { size += c.length; if (size > MAX_IMAGE_BYTES) { tooBig = true; return; } chunks.push(c); });
+        req.on("end", () => done()); req.on("error", () => done());
+      });
+      if (tooBig) return send(res, 413, { error: "Images must be under 10 MB." });
+      try { return send(res, 200, { id: saveImage(d.uploadsDir, Buffer.concat(chunks)).id }); }
+      catch (e) { return send(res, 400, { error: (e as Error).message }); }
+    }
     const sm = /^\/api\/sessions\/([\w-]+)\/(send|seal)$/.exec(p);
     if (sm && req.method === "POST") {
       let body: any;
       try { body = await readJson(req); } catch (e) { return send(res, 400, { error: (e as Error).message }); }
       const r = sm[2] === "send"
-        ? await d.sendWord?.(sm[1], String(body.text ?? ""))
+        ? await (async () => {
+            let images: string[] = [];
+            try { images = d.uploadsDir ? resolveImages(d.uploadsDir, body.images) : []; } catch (e) { return { ok: false, message: (e as Error).message }; }
+            return d.sendWord?.(sm[1], String(body.text ?? ""), images);
+          })()
         : body.decision === "grant" || body.decision === "refuse" ? await d.answerSeal?.(sm[1], body.decision) : (send(res, 400, { error: "decision must be grant or refuse" }), null);
       if (r === null) return;
       return r ? send(res, 200, r) : send(res, 404, { error: "No live mage with that id." });

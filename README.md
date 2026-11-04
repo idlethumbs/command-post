@@ -18,7 +18,7 @@ Drag to pan, scroll or pinch to zoom, `0` to fit all realms, `←`/`→` + `⏎`
 | | |
 |---|---|
 | Reads | `~/.claude/sessions/*.json` (live session registry), the tail of each live session's transcript under `~/.claude/projects/`, `ps` (to check that sessions are alive and which terminal hosts them), `git rev-parse` (to group folders into realms) |
-| Writes | `~/.arcanum/realms.json` only: discovered realms and your charter edits (names, landmarks, banners, merges). Safe to edit by hand or delete. |
+| Writes | `~/.arcanum/realms.json`: discovered realms and your charter edits (names, landmarks, banners, merges); safe to edit by hand or delete. `~/.arcanum/uploads/`: images you attach, deleted after 7 days. |
 | Runs | Only when you click Open portal, Send word, or Grant/Refuse: `cmux`, `osascript`, `tmux` or `open`, with arguments taken from `ps` and cmux, never through a shell |
 | Never | Claude Code settings, hooks or transcripts |
 
@@ -28,7 +28,7 @@ In a realm, **Send word** (`R`, then `⌘⏎`) types your reply into the session
 
 | Where it runs | Send word | Grant / Refuse a permission prompt |
 |---|---|---|
-| cmux | Yes, multi-line (delivered as a paste) | Yes: presses the prompt's own Yes / No option |
+| cmux | Yes, multi-line, plus pasted or dropped images (up to 5, arriving as `[Image #n]` attachments) | Yes: presses the prompt's own Yes / No option |
 | tmux | One line | Yes |
 | Terminal.app / iTerm | One line (AppleScript) | No, so open the portal |
 | Warp / VS Code / background | No: they can't be typed into, so open them instead | No |

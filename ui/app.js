@@ -26,20 +26,34 @@ const home = p => p.replace(/^\/Users\/[^/]+/, "~");
 /* claude-opus-5-5 → Opus 5.5 · claude-haiku-4-5-20251001 → Haiku 4.5 */
 const prettyModel = id => { const m = /claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-|$)/.exec(id ?? ""); return m ? `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}${m[3] ? "." + m[3] : ""}` : id; };
 
-/* tiny, safe markdown for the latest missive: paragraphs, bullets, headings, `code`, **bold** */
+/* tiny, safe markdown for the latest missive: paragraphs, bullets, headings, tables, `code`, **bold** */
 function missive(md) {
   if (!md) return "<p>No word yet.</p>";
   const inline = t => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
-  const out = []; let list = null;
-  for (const block of md.replace(/```[\s\S]*?```/g, m => "`" + m.slice(3, -3).trim().split("\n").slice(-3).join(" ⏎ ") + "`").split(/\n{2,}/)) {
-    for (const line of block.split("\n")) {
-      const li = /^\s*(?:[-*]|\d+\.)\s+(.*)/.exec(line), h = /^#{1,6}\s+(.*)/.exec(line);
-      if (li) { if (!list) { list = []; } list.push(`<li>${inline(li[1])}</li>`); continue; }
-      if (list) { out.push(`<ul>${list.join("")}</ul>`); list = null; }
-      if (h) out.push(`<h4>${inline(h[1])}</h4>`); else if (line.trim()) out.push(`<p>${inline(line)}</p>`);
-    }
+  const cells = l => l.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+  const out = []; let list = null, table = null;
+  const flush = () => {
     if (list) { out.push(`<ul>${list.join("")}</ul>`); list = null; }
+    if (table) {
+      const [head, ...body] = table;
+      out.push(`<div class="tablewrap"><table><thead><tr>${head.map(c => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${body.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+      table = null;
+    }
+  };
+  const text = md.replace(/```[\s\S]*?```/g, m => "`" + m.slice(3, -3).trim().split("\n").slice(-3).join(" ⏎ ") + "`");
+  for (const line of text.split("\n")) {
+    if (/^\s*\|.*\|\s*$/.test(line)) {
+      if (list) flush();
+      if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) continue;   // the |---|---| separator
+      (table ??= []).push(cells(line)); continue;
+    }
+    if (table) flush();
+    const li = /^\s*(?:[-*]|\d+\.)\s+(.*)/.exec(line), h = /^#{1,6}\s+(.*)/.exec(line);
+    if (li) { (list ??= []).push(`<li>${inline(li[1])}</li>`); continue; }
+    flush();
+    if (h) out.push(`<h4>${inline(h[1])}</h4>`); else if (line.trim()) out.push(`<p>${inline(line)}</p>`);
   }
+  flush();
   return out.join("");
 }
 
@@ -137,10 +151,10 @@ function renderRealm(entering) {
   const ed = $("#editRealm"); if (ed) ed.onclick = () => { ui.charter = !ui.charter; renderRealm(); };
   const sc = $("#scene"), bd = buildBackdrop(Math.max(40, Math.round(sc.clientWidth / 3)), 100, biome);
   bd.className = "backdrop"; bd.setAttribute("aria-hidden", "true"); sc.prepend(bd);
-  const lm = makeLandmark(r.landmark, r.banner, 3, 2); lm.className = "landmark"; sc.insertBefore(lm, $("#troupe"));
+  const lm = makeLandmark(r.landmark, r.banner, 2, 2); lm.className = "landmark"; sc.insertBefore(lm, $("#troupe"));
   for (const s of t) {
     const b = document.createElement("button"); b.className = "mage" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
-    b.appendChild(makeMage(s, 3, `${RANK[s.model].title} ${s.name}: ${STATE[s.state].label}`));
+    b.appendChild(makeMage(s, 2, `${RANK[s.model].title} ${s.name}: ${STATE[s.state].label}`));
     b.insertAdjacentHTML("afterbegin", `<span class="bubble ${STATE[s.state].cls}">${STATE[s.state].glyph}</span>`);
     b.insertAdjacentHTML("beforeend", `<span class="name">${esc(s.name)}</span>`);
     b.onclick = () => { ui.session = s.id; renderRealm(); };
@@ -186,12 +200,34 @@ function wordBlock(s) {
     <div class="btns">${portalButton(s)}</div></div>`;
   const multi = s.host === "cmux";
   return `<form class="orders" id="orders"><label class="lbl" for="reply">Send word</label>
-    <textarea id="reply" placeholder="${s.state === "cast" ? "It's casting. Your word waits until it finishes…" : "Type your reply…"}" ${multi ? "" : 'rows="2"'}></textarea>
-    <div class="via">Typed into its ${esc(s.where)} prompt as if you were there.${multi ? "" : " One line only for now."} If you've left a half-typed draft there, Arcanum won't touch it.</div>
+    <textarea id="reply" placeholder="${s.state === "cast" ? "It's casting. Your word waits until it finishes…" : multi ? "Type your reply. Paste or drop images too…" : "Type your reply…"}" ${multi ? "" : 'rows="2"'}></textarea>
+    <div class="attach" id="attach"></div>
+    <div class="via">Typed into its ${esc(s.where)} prompt as if you were there.${multi ? " Images arrive as attachments, like pasting into Claude." : " One line, no images, for now."} If you've left a half-typed draft there, Arcanum won't touch it.</div>
     <div class="btns"><button class="btn" type="submit">Send word</button>${portalButton(s)}
     <span class="hint"><kbd>⌘</kbd> + <kbd>⏎</kbd> send</span></div></form>`;
 }
 const drafts = {};   // unsent text per mage survives live re-renders
+const pics = {};     // pasted images per mage: [{ id?, url, busy }]
+function renderAttach(s) {
+  const el = $("#attach"); if (!el) return;
+  el.innerHTML = (pics[s.id] ?? []).map((p, i) => `<span class="thumb${p.busy ? " busy" : ""}"><img src="${p.url}" alt="Attached image ${i + 1}"><button type="button" data-unpic="${i}" aria-label="Remove image ${i + 1}">×</button></span>`).join("");
+  el.querySelectorAll("[data-unpic]").forEach(b => b.onclick = () => { const [p] = pics[s.id].splice(Number(b.dataset.unpic), 1); URL.revokeObjectURL(p.url); renderAttach(s); });
+}
+async function addImages(s, files) {
+  if (s.host !== "cmux") return toast("Images can only be sent to cmux sessions so far.");
+  const list = (pics[s.id] ??= []);
+  for (const f of files) {
+    if (list.length >= 5) { toast("Up to 5 images per message."); break; }
+    if (f.size > 10 * 1024 * 1024) { toast(`${f.name || "That image"} is over 10 MB.`); continue; }
+    const p = { url: URL.createObjectURL(f), busy: true }; list.push(p); renderAttach(s);
+    try {
+      const r = await fetch("/api/uploads", { method: "POST", headers: { "content-type": f.type || "application/octet-stream" }, body: f });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error);
+      p.id = j.id; p.busy = false;
+    } catch (e) { list.splice(list.indexOf(p), 1); toast(e.message || "Couldn't attach that image."); }
+    renderAttach(s);
+  }
+}
 async function post(url, body) {
   try { const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); return await r.json(); }
   catch { return { ok: false, message: "The Arcanum daemon isn't answering." }; }
@@ -202,14 +238,22 @@ function wireComms(s) {
     const ta = $("#reply");
     ta.value = drafts[s.id] ?? "";
     ta.oninput = () => { drafts[s.id] = ta.value; };
+    renderAttach(s);
+    const imagesIn = dt => [...(dt?.files ?? [])].filter(f => f.type.startsWith("image/"));
+    ta.onpaste = e => { const f = imagesIn(e.clipboardData); if (f.length) { e.preventDefault(); addImages(s, f); } };
+    f.ondragover = e => { if ([...e.dataTransfer.items].some(i => i.type.startsWith("image/"))) { e.preventDefault(); f.classList.add("dropping"); } };
+    f.ondragleave = () => f.classList.remove("dropping");
+    f.ondrop = e => { f.classList.remove("dropping"); const fl = imagesIn(e.dataTransfer); if (fl.length) { e.preventDefault(); addImages(s, fl); } };
     ta.onkeydown = e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); f.requestSubmit(); } };
     f.onsubmit = async e => {
       e.preventDefault();
-      const text = ta.value.trim(); if (!text) return toast("Write something first");
+      const text = ta.value.trim(), imgs = pics[s.id] ?? [];
+      if (imgs.some(p => p.busy)) return toast("Still attaching images…");
+      if (!text && !imgs.length) return toast("Write something first");
       const btn = f.querySelector("[type=submit]"); btn.disabled = true; btn.textContent = "Sending…";
-      const r = await post(`/api/sessions/${encodeURIComponent(s.id)}/send`, { text });
+      const r = await post(`/api/sessions/${encodeURIComponent(s.id)}/send`, { text, images: imgs.map(p => p.id) });
       toast(r.message ?? r.error);
-      if (r.ok) { delete drafts[s.id]; ta.value = ""; }
+      if (r.ok) { delete drafts[s.id]; ta.value = ""; imgs.forEach(p => URL.revokeObjectURL(p.url)); delete pics[s.id]; renderAttach(s); }
       btn.disabled = false; btn.textContent = "Send word";
     };
   }
@@ -237,10 +281,10 @@ function renderComms(s) {
       <dt>FOLDER</dt><dd class="crumb">${esc(home(s.cwd))}${s.branch ? ` · ${esc(s.branch)}` : ""}</dd></dl></div></div>
     ${s.note ? `<div class="via">${esc(s.note)}</div>` : ""}
     ${s.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(s.title)}</b></div>` : ""}
-    <div class="paper"><span class="lbl">The matter at hand</span><p>${esc(s.briefing)}</p></div>
+    <div class="paper brief"><span class="lbl">The matter at hand</span><p>${esc(s.briefing)}</p></div>
     <div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${missive(s.lastText)}</div>
     ${s.state === "seal" ? sealBlock(s) : wordBlock(s)}`;
-  $("#portrait").appendChild(makeMage(s, 3, `${RANK[s.model].title} ${s.name}`));
+  $("#portrait").appendChild(makeMage(s, 2, `${RANK[s.model].title} ${s.name}`));
   wireComms(s);
 }
 

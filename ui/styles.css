@@ -177,10 +177,10 @@
   .realm-top h2 { font-family: var(--f-display); font-weight: 400; font-size: 46px; line-height: 1; margin: 0; text-shadow: 2px 2px 0 var(--ink); }
   .realm-top .meta { font-size: 14px; color: var(--muted); }
   .realm-top .right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .scene { position: relative; height: 300px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
+  .scene { position: relative; height: 200px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
   .scene > canvas.backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .scene .landmark { position: absolute; left: 18px; bottom: 26px; }
-  .troupe { position: absolute; left: 230px; right: 12px; bottom: 6px; display: flex; gap: 6px; align-items: flex-end; overflow-x: auto; padding-top: 30px; }
+  .scene .landmark { position: absolute; left: 14px; bottom: 16px; }
+  .troupe { position: absolute; left: 160px; right: 12px; bottom: 4px; display: flex; gap: 6px; align-items: flex-end; overflow-x: auto; padding-top: 30px; }
   @media (max-width: 640px) { .scene .landmark { display: none; } .troupe { left: 8px; } }
   .mage { all: unset; box-sizing: border-box; cursor: pointer; position: relative; display: grid; justify-items: center; flex: none; }
   .mage .name { font-size: 12px; font-weight: 600; background: rgba(15,12,30,.85); padding: 1px 7px; border-radius: 3px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: -6px; }
@@ -198,7 +198,7 @@
   @keyframes bbob { 50% { translate: -50% -4px; } }
   @keyframes drift { 0% { translate: -20% 4px; opacity: 0; } 50% { opacity: 1; } 100% { translate: 20% -10px; opacity: 0; } }
 
-  .op { display: grid; grid-template-columns: minmax(220px, 290px) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .op { display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); gap: 14px; align-items: start; }
   @media (max-width: 1100px) { .op { grid-template-columns: 1fr; } }
   .card { background: var(--panel); border-radius: 6px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
   .circle { padding: 12px; display: grid; gap: 4px; }
@@ -212,10 +212,11 @@
   .chip.counsel { background: var(--counsel); color: #fff; } .chip.seal { background: var(--gold); } .chip.cast { background: var(--cast); } .chip.rest { background: var(--muted); }
 
   .comms { padding: 16px; display: grid; gap: 14px; }
-  .dossier { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
-  .portrait { border-radius: 4px; box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--frame); padding: 6px 14px 0; background: var(--portrait-bg); }
-  .dossier h3 { font-size: 20px; font-weight: 700; margin: 0 0 6px; word-break: break-word; }
-  .dossier dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 15px; align-items: center; }
+  .dossier { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
+  .portrait { border-radius: 4px; box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--frame); padding: 2px 6px 0; background: var(--portrait-bg); }
+  .dossier h3 { font-size: 18px; font-weight: 700; margin: 0 0 4px; word-break: break-word; }
+  .dossier dl { margin: 0; display: grid; grid-template-columns: auto max-content auto 1fr; gap: 3px 12px; font-size: 14px; align-items: center; }
+  @media (max-width: 1200px) { .dossier dl { grid-template-columns: auto 1fr; } }
   .dossier dt { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; color: var(--muted); } .dossier dd { margin: 0; }
   .paper {
     background: linear-gradient(180deg, #f6ebcd, var(--parch)); color: var(--parch-ink); padding: 14px 18px; border-radius: 3px;
@@ -225,7 +226,9 @@
   .paper p { margin: 0 0 .6em; max-width: 70ch; } .paper p:last-child { margin-bottom: 0; }
   .paper code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; background: rgba(42,32,22,.08); padding: 0 4px; border-radius: 2px; }
   .paper.casting p:last-child::after { content: "▌"; animation: blink .8s steps(2) infinite; }
-  .xmit { max-height: 260px; overflow: auto; }
+  .xmit { max-height: min(64vh, 720px); overflow: auto; font-size: 17px; line-height: 1.55; padding: 18px 22px; }
+  .brief { padding: 10px 16px; font-size: 15px; line-height: 1.45; }
+  .comms { gap: 12px; }
   .orders { display: grid; gap: 10px; }
   .orders textarea {
     width: 100%; min-height: 84px; resize: vertical; background: var(--ink); color: var(--parch); border: 2px solid var(--frame); border-radius: 4px;
@@ -259,3 +262,16 @@
     box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--gold), 0 8px 20px rgba(0,0,0,.4);
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+  .attach { display: flex; flex-wrap: wrap; gap: 8px; }
+  .attach:empty { display: none; }
+  .thumb { position: relative; width: 64px; height: 64px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 2px var(--frame); background: var(--ink); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; image-rendering: auto; }
+  .thumb.busy img { opacity: .4; }
+  .thumb button { all: unset; box-sizing: border-box; cursor: pointer; position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(15,12,30,.85); color: var(--parch); font-size: 12px; text-align: center; line-height: 18px; }
+  .thumb button:focus-visible { outline: 2px solid var(--gold); }
+  .orders.dropping textarea { border-color: var(--cast); border-style: dashed; }
+  .tablewrap { overflow-x: auto; margin: 0 0 .8em; }
+  .paper table { border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .paper th, .paper td { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid rgba(138,106,58,.35); vertical-align: top; }
+  .paper th { font-weight: 700; color: #6a4a1a; }

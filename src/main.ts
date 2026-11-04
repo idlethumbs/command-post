@@ -6,6 +6,7 @@ import { ARCANUM_DIR, CLAUDE_DIR, PORT } from "./paths";
 import { findCmux, planPortal, readCmuxLayout, runPortal } from "./portal";
 import { readPs } from "./procs";
 import { answerSeal, readSeal, sendWord, type SendCtx } from "./send";
+import { pruneUploads } from "./uploads";
 import { realEnv } from "./realms";
 import { createArcanumServer } from "./server";
 import { buildSnapshot } from "./snapshot";
@@ -16,6 +17,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fontDirs = ["pixelify-sans", "jacquard-24"].map(f => path.join(root, "node_modules", "@fontsource", f, "files"));
 
 const cmux = findCmux();
+const uploadsDir = path.join(ARCANUM_DIR, "uploads");
+pruneUploads(uploadsDir);
 const live = (id: string) => snapshot.sessions.find(x => x.id === id);
 const sendCtx = async (s: { host: string }): Promise<SendCtx> => ({ ps: readPs(), cmux: cmux && { bin: cmux.bin, layout: s.host === "cmux" ? await readCmuxLayout(cmux.bin) : undefined } });
 
@@ -33,7 +36,7 @@ const rebuild = () => {
 let timer: NodeJS.Timeout | undefined;
 const schedule = () => { clearTimeout(timer); timer = setTimeout(rebuild, 250); };
 
-const app = createArcanumServer({ uiDir: path.join(root, "ui"), fontDirs, arcanumDir: ARCANUM_DIR, getSnapshot: () => snapshot, onConfigChange: schedule,
+const app = createArcanumServer({ uploadsDir, uiDir: path.join(root, "ui"), fontDirs, arcanumDir: ARCANUM_DIR, getSnapshot: () => snapshot, onConfigChange: schedule,
   // Read the process table and cmux layout at click time: panes move, tabs close.
   async openPortal(id) {
     const s = snapshot.sessions.find(x => x.id === id);
@@ -43,9 +46,9 @@ const app = createArcanumServer({ uiDir: path.join(root, "ui"), fontDirs, arcanu
     console.log(`portal → ${s.name} (${s.where}): ${result.ok ? "ok" : "failed"} · ${result.message}`);
     return result;
   },
-  async sendWord(id, text) {
+  async sendWord(id, text, images) {
     const s = live(id); if (!s) return undefined;
-    const r = await sendWord(s, text, await sendCtx(s));
+    const r = await sendWord(s, text, await sendCtx(s), images);
     console.log(`send → ${s.name} (${s.where}): ${r.ok ? "ok" : "refused"} · ${r.message}`);
     if (r.ok) schedule();
     return r;

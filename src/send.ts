@@ -100,7 +100,7 @@ const ITERM = (body: string) => `on run argv
 end run`;
 
 /** `solid` is the screen without faint text, where the host can tell (cmux). */
-interface Target { read(): Promise<{ text: string; solid?: string }>; type(text: string): Promise<void>; key(k: string): Promise<void> }
+interface Target { read(): Promise<{ text: string; solid?: string }>; type(text: string, images?: string[]): Promise<void>; key(k: string): Promise<void> }
 
 function targetFor(s: Session, ctx: SendCtx): Target | string {
   if (s.host === "cmux") {
@@ -110,7 +110,11 @@ function targetFor(s: Session, ctx: SendCtx): Target | string {
     return {
       read: async () => gridText(JSON.parse(await exec(bin, ["rpc", "terminal.replay", JSON.stringify({ surface_id: id })]))),
       // a bracketed paste: delivered verbatim (newlines, backslashes) and submitted in one step
-      type: async text => { await exec(bin, ["rpc", "terminal.paste", JSON.stringify({ surface_id: id, text })]); },
+      type: async (text, images = []) => {
+        // image paths pasted together, unsubmitted, become [Image #n] attachments; then the text submits the lot
+        if (images.length) await exec(bin, ["rpc", "terminal.paste", JSON.stringify({ surface_id: id, text: images.join(" "), submit: false })]);
+        await exec(bin, ["rpc", "terminal.paste", JSON.stringify({ surface_id: id, text: images.length ? " " + text : text })]);
+      },
       key: async k => { await exec(bin, ["send", "--surface", id, "--", k]); },
     };
   }
@@ -144,9 +148,11 @@ function targetFor(s: Session, ctx: SendCtx): Target | string {
 const firstLine = (t: string) => t.split("\n")[0].replace(/\s+/g, " ").slice(0, 80);
 
 /** Type a reply into the session's own prompt, as if you were at the keyboard. Refuses whenever that could land in the wrong place. */
-export async function sendWord(s: Session, raw: string, ctx: SendCtx): Promise<SendResult> {
+export async function sendWord(s: Session, raw: string, ctx: SendCtx, images: string[] = []): Promise<SendResult> {
   const text = cleanText(raw).trim();
-  if (!text) return { ok: false, message: "Write something first." };
+  if (!text && !images.length) return { ok: false, message: "Write something first." };
+  if (images.length && s.host !== "cmux") return { ok: false, message: "Images can only be sent to cmux sessions so far. Open the portal and paste it there." };
+  if (images.some(p => /\s/.test(p))) return { ok: false, message: "Image paths can't contain spaces." };
   if (s.status === "shell") return { ok: false, message: `${s.name} is in shell mode (!). Open the portal to finish there first.` };
   if (s.state === "seal") return { ok: false, message: `${s.name} is waiting on a permission prompt. Grant or refuse it first.` };
   if (s.waitingFor) return { ok: false, message: `${s.name} is showing a question dialog. Open the portal to pick an answer.` };
@@ -158,8 +164,9 @@ export async function sendWord(s: Session, raw: string, ctx: SendCtx): Promise<S
     if (screen.kind === "permission") return { ok: false, message: `${s.name} just asked for permission. Grant or refuse it first.` };
     if (screen.kind === "unknown") return { ok: false, message: `Couldn't see ${s.name}'s prompt, so nothing was typed. Open the portal instead.` };
     if (screen.draft) return { ok: false, message: `There's an unsent draft in ${s.name}'s prompt (“${firstLine(screen.draft)}”). Open the portal to finish or clear it.` };
-    await t.type(text);
-    return { ok: true, message: s.state === "cast" ? `Queued for ${s.name}: it will read it when it finishes casting.` : `Word sent to ${s.name}.` };
+    await t.type(text, images);
+    const what = images.length ? `${images.length === 1 ? "An image" : `${images.length} images`}${text ? " and your word" : ""}` : "Your word";
+    return { ok: true, message: s.state === "cast" ? `${what} queued for ${s.name}: it will read it when it finishes casting.` : `${what} sent to ${s.name}.` };
   } catch (e) {
     return { ok: false, message: `Couldn't send: ${(e as Error).message}` };
   }

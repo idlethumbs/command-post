@@ -13,7 +13,7 @@ async function setup() {
   assignRealms(["/p/a", "/p/b"], cfg, { gitRoot: c => c, isWilds: () => false }, 1);
   saveConfig(arcanumDir, cfg);
   let changes = 0;
-  const app = createArcanumServer({ uiDir: ui, fontDirs: [], arcanumDir, sendWord: async (id: string, text: string) => id === "abc" ? { ok: true, message: `sent ${text}` } : undefined,
+  const app = createArcanumServer({ uploadsDir: path.join(arcanumDir, "uploads"), uiDir: ui, fontDirs: [], arcanumDir, sendWord: async (id: string, text: string, images: string[]) => id === "abc" ? { ok: true, message: `sent ${text}${images.length ? " +" + images.length : ""}` } : undefined,
     answerSeal: async (id: string, d: "grant" | "refuse") => id === "abc" ? { ok: true, message: d } : undefined,
     openPortal: async (id: string) => id === "abc" ? { ok: true, precision: "exact" as const, message: "Opened." } : undefined, getSnapshot: () => ({ generatedAt: 1, realms: loadConfig(arcanumDir).realms, sessions: [] }), onConfigChange: () => changes++ });
   await new Promise<void>(r => app.server.listen(0, "127.0.0.1", r));
@@ -50,6 +50,12 @@ test("serves the page, the state and realm edits", async () => {
     expect(await (await post("/api/sessions/abc/seal", { decision: "grant" })).json()).toEqual({ ok: true, message: "grant" });
     expect((await post("/api/sessions/abc/seal", { decision: "maybe" })).status).toBe(400);
     expect((await post("/api/sessions/zzz/send", { text: "x" })).status).toBe(404);
+
+    const up: any = await (await fetch(s.base + "/api/uploads", { method: "POST", headers: { "content-type": "image/png" }, body: Buffer.from("89504e470d0a1a0a0000000d49484452", "hex") })).json();
+    expect(up.id).toMatch(/^[0-9a-f]{20}\.png$/);
+    expect(await (await post("/api/sessions/abc/send", { text: "look", images: [up.id] })).json()).toEqual({ ok: true, message: "sent look +1" });
+    expect(await (await post("/api/sessions/abc/send", { text: "look", images: ["/etc/passwd"] })).json()).toEqual({ ok: false, message: "Unknown image." });
+    expect((await fetch(s.base + "/api/uploads", { method: "POST", body: "<svg/>" })).status).toBe(400);
   } finally { s.app.close(); }
 });
 
