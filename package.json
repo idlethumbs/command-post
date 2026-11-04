@@ -1,0 +1,23 @@
+{
+  "name": "arcanum",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A retro world map of your Claude Code sessions. Local only.",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "dev": "tsx watch src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/jacquard-24": "^5.2.0",
+    "@fontsource/pixelify-sans": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
