@@ -1,9 +1,3 @@
-@font-face { font-family: "Alegreya"; font-weight: 400; font-style: normal; font-display: swap; src: url(/fonts/alegreya-latin-400-normal.woff2) format("woff2"); }
-@font-face { font-family: "Alegreya"; font-weight: 400; font-style: italic; font-display: swap; src: url(/fonts/alegreya-latin-400-italic.woff2) format("woff2"); }
-@font-face { font-family: "Alegreya"; font-weight: 500; font-style: normal; font-display: swap; src: url(/fonts/alegreya-latin-500-normal.woff2) format("woff2"); }
-@font-face { font-family: "Alegreya"; font-weight: 500; font-style: italic; font-display: swap; src: url(/fonts/alegreya-latin-500-italic.woff2) format("woff2"); }
-@font-face { font-family: "Alegreya"; font-weight: 700; font-style: normal; font-display: swap; src: url(/fonts/alegreya-latin-700-normal.woff2) format("woff2"); }
-@font-face { font-family: "Alegreya"; font-weight: 700; font-style: italic; font-display: swap; src: url(/fonts/alegreya-latin-700-italic.woff2) format("woff2"); }
 @font-face { font-family: "Alegreya Sans"; font-weight: 400; font-display: swap; src: url(/fonts/alegreya-sans-latin-400-normal.woff2) format("woff2"); }
 @font-face { font-family: "Alegreya Sans"; font-weight: 500; font-display: swap; src: url(/fonts/alegreya-sans-latin-500-normal.woff2) format("woff2"); }
 @font-face { font-family: "Alegreya Sans"; font-weight: 700; font-display: swap; src: url(/fonts/alegreya-sans-latin-700-normal.woff2) format("woff2"); }
@@ -27,7 +21,7 @@
     --muted: #a39bcb;
     --f-display: "Jacquard 24", "Pixelify Sans", serif;
     --f-ui: "Pixelify Sans", ui-rounded, system-ui, sans-serif;
-    --f-read: "Alegreya", Georgia, "Iowan Old Style", serif;      /* long reading: anything Claude wrote */
+    --f-read: "Alegreya Sans", system-ui, -apple-system, sans-serif; /* long reading: anything Claude wrote */
     --f-write: "Alegreya Sans", system-ui, -apple-system, sans-serif; /* what you type */
   }
   * { box-sizing: border-box; }
@@ -294,7 +288,7 @@
   .paper .lbl { font-family: var(--f-ui); }
   .paper b, .paper th { font-weight: 700; }
   .paper h4 { font-family: var(--f-read); font-weight: 700; font-size: 18px; }
-  .xmit { font-size: 19px; line-height: 1.55; }
+  .xmit { font-size: 18px; line-height: 1.55; }
   .brief { font-size: 17px; }
   .paper table { font-family: var(--f-read); font-size: 17px; }
   .paper code { font-size: 14px; }

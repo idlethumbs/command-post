@@ -11,7 +11,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fontsource/alegreya": "^5.3.0",
     "@fontsource/alegreya-sans": "^5.3.0",
     "@fontsource/jacquard-24": "^5.2.0",
     "@fontsource/pixelify-sans": "^5.2.0"

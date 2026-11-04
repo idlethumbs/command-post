@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@fontsource/alegreya':
-        specifier: ^5.3.0
-        version: 5.3.0
       '@fontsource/alegreya-sans':
         specifier: ^5.3.0
         version: 5.3.0
@@ -332,9 +329,6 @@ packages:
 
   '@fontsource/alegreya-sans@5.3.0':
     resolution: {integrity: sha512-Uf0RbuwzhSS3NQrBFcRzEUm7TxDQW3qdAbQ6JIOhsIW6V+YN2dqlR99lhfEE38R3GHgMCMJBzqSp7aJxhNXSOw==}
-
-  '@fontsource/alegreya@5.3.0':
-    resolution: {integrity: sha512-YCsp9dHYfMNdggXxinMMS0nkGlZkzs2MvPL7qPVjSO4DM1uJ29hmKEdTC/fBP+2K4Aa+4Z44JuOQz05eDcvNJA==}
 
   '@fontsource/jacquard-24@5.3.0':
     resolution: {integrity: sha512-oCWI8QHMueJt2HcdBbQPOUZ3ghLC1xZk8lG1cMYJN3Ds3pghVlVQrTdKJ+v1V6Otihtj4Iov20IfUJTg7HBdXQ==}
@@ -857,8 +851,6 @@ snapshots:
     optional: true
 
   '@fontsource/alegreya-sans@5.3.0': {}
-
-  '@fontsource/alegreya@5.3.0': {}
 
   '@fontsource/jacquard-24@5.3.0': {}
 
