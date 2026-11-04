@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arcanum</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/ui/styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="Sidebar">
+    <div class="brand">
+      <canvas id="logoSprite" aria-hidden="true"></canvas>
+      <div><h1>Arcanum</h1><p id="sumline">Gathering the realms…</p></div>
+    </div>
+    <span class="sample livepill" id="live">LIVE · READ-ONLY</span>
+
+    <nav class="nav" aria-label="Main">
+      <button id="navMap" aria-current="page"><span class="ico">◈</span>World map<span></span></button>
+      <button id="navScry"><span class="ico">⌕</span>Scry for a mage<kbd>⌘K</kbd></button>
+      <div class="scry" id="scryBox" hidden><input id="scry" type="text" placeholder="Name, realm or topic…" aria-label="Search mages"><div class="results" id="results"></div></div>
+      <button aria-disabled="true" title="Coming in M5"><span class="ico">✧</span>Summon a mage<span class="soon">LATER</span></button>
+      <button aria-disabled="true" title="Coming in M5"><span class="ico">⌂</span>Archive of the departed<span class="soon">LATER</span></button>
+      <button aria-disabled="true" title="Settings: sound, hooks, theme"><span class="ico">❖</span>Grimoire<span class="soon">LATER</span></button>
+    </nav>
+
+    <section class="await" aria-label="Waiting on you">
+      <span class="lbl">Waiting on you</span>
+      <div class="row2" id="awaitRow"></div>
+    </section>
+
+    <section class="ravens" aria-label="Ravens">
+      <div class="ravens-h"><span class="lbl">Ravens · newest first</span>
+        <div class="tabs" role="group" aria-label="Filter ravens"><button data-filter="all" aria-pressed="true">All</button><button data-filter="you" aria-pressed="false">Needs you</button></div></div>
+      <ul class="feed" id="feed"></ul>
+    </section>
+  </aside>
+  <main class="stage" id="view"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script type="module" src="/ui/app.js"></script>
+</body>
+</html>
