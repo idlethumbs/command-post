@@ -18,13 +18,17 @@ export const humanize = (s: string) => s.split(/[-_\s]+/).filter(Boolean).map(w 
 function fnv(s: string) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return h >>> 0; }
 const within = (dir: string, land: string) => dir === land || dir.startsWith(land.endsWith("/") ? land : land + "/");
 
+/** Pack realms tightly: try slots in a ring around every existing realm, take the free one nearest the centre (wide aspect). */
 function place(existing: { x: number; y: number }[]) {
   if (!existing.length) return { x: 0, y: 0 };
-  const cx = existing.reduce((a, p) => a + p.x, 0) / existing.length, cy = existing.reduce((a, p) => a + p.y, 0) / existing.length;
-  for (let k = 1; ; k++) {   // walk a spiral out from the centroid; take the first spot clear of every realm
-    const a = k * 0.55, rad = R * 0.32 * k, x = Math.round(cx + Math.cos(a) * rad * 1.3), y = Math.round(cy + Math.sin(a) * rad);
-    if (existing.every(p => Math.hypot(p.x - x, p.y - y) >= 2 * R)) return { x, y };
+  let best: { x: number; y: number } | undefined, bestScore = Infinity;
+  for (const p of existing) for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2, x = Math.round(p.x + Math.cos(a) * 2.05 * R), y = Math.round(p.y + Math.sin(a) * 2.05 * R);
+    if (!existing.every(q => Math.hypot(q.x - x, q.y - y) >= 2 * R)) continue;
+    const score = Math.hypot(x * 0.72, y);
+    if (score < bestScore) { bestScore = score; best = { x, y }; }
   }
+  return best!;
 }
 
 function realmFor(root: string, cfg: Config): Realm | undefined {

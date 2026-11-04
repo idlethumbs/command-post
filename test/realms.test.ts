@@ -57,6 +57,9 @@ test("defaults are deterministic and realms are spread out", () => {
   const ps = many.realms.map(r => r.pos);
   for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++)
     expect(Math.hypot(ps[i].x - ps[j].x, ps[i].y - ps[j].y)).toBeGreaterThanOrEqual(2 * R - 1e-6);
+  // compact: the bounding box stays within ~3× the area 40 tightly packed realms need
+  const w = Math.max(...ps.map(p => p.x)) - Math.min(...ps.map(p => p.x)) + 2 * R, h = Math.max(...ps.map(p => p.y)) - Math.min(...ps.map(p => p.y)) + 2 * R;
+  expect(w * h).toBeLessThan(40 * (2 * R) ** 2 * 3);
 });
 
 test("updates are validated and config round-trips through disk", () => {
