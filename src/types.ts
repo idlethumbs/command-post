@@ -27,6 +27,7 @@ export interface Session {
   state: MageState; since: number; host: Host; where: string; briefing: string; lastText?: string;
   waitingFor?: string; cwd: string; branch?: string;
   jobId?: string; tmux?: string; portal?: "exact" | "app" | "none"; note?: string;
+  status?: string; reply?: "type" | "none"; seal?: boolean;
 }
 
 export interface Snapshot { generatedAt: number; realms: Realm[]; sessions: Session[] }

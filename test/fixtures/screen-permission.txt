@@ -1,0 +1,11 @@
+⏺ Bash(touch arcanum-seal-test.txt)
+  ⎿  Waiting…
+───────────────────────────────────────────────────────
+ Bash command
+   touch arcanum-seal-test.txt
+   Create an empty file named arcanum-seal-test.txt
+ Do you want to proceed?
+ ❯ 1. Yes
+   2. Yes, and always allow access to /private/tmp/x from this project
+   3. No
+ Esc to cancel · Tab to amend

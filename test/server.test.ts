@@ -13,7 +13,9 @@ async function setup() {
   assignRealms(["/p/a", "/p/b"], cfg, { gitRoot: c => c, isWilds: () => false }, 1);
   saveConfig(arcanumDir, cfg);
   let changes = 0;
-  const app = createArcanumServer({ uiDir: ui, fontDirs: [], arcanumDir, openPortal: async (id: string) => id === "abc" ? { ok: true, precision: "exact" as const, message: "Opened." } : undefined, getSnapshot: () => ({ generatedAt: 1, realms: loadConfig(arcanumDir).realms, sessions: [] }), onConfigChange: () => changes++ });
+  const app = createArcanumServer({ uiDir: ui, fontDirs: [], arcanumDir, sendWord: async (id: string, text: string) => id === "abc" ? { ok: true, message: `sent ${text}` } : undefined,
+    answerSeal: async (id: string, d: "grant" | "refuse") => id === "abc" ? { ok: true, message: d } : undefined,
+    openPortal: async (id: string) => id === "abc" ? { ok: true, precision: "exact" as const, message: "Opened." } : undefined, getSnapshot: () => ({ generatedAt: 1, realms: loadConfig(arcanumDir).realms, sessions: [] }), onConfigChange: () => changes++ });
   await new Promise<void>(r => app.server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
   return { app, base, arcanumDir, changes: () => changes };
@@ -23,7 +25,7 @@ test("serves the page, the state and realm edits", async () => {
   const s = await setup();
   try {
     expect(await (await fetch(s.base + "/")).text()).toContain("<title>Arcanum</title>");
-    const state = await (await fetch(s.base + "/api/state")).json();
+    const state: any = await (await fetch(s.base + "/api/state")).json();
     expect(state.realms.map((r: any) => r.id)).toEqual(["a", "b"]);
 
     const patch = await fetch(s.base + "/api/realms/a", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Alpha" }) });
@@ -32,7 +34,7 @@ test("serves the page, the state and realm edits", async () => {
 
     const bad = await fetch(s.base + "/api/realms/a", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ landmark: "moonbase" }) });
     expect(bad.status).toBe(400);
-    expect((await bad.json()).error).toMatch(/Unknown landmark/);
+    expect(((await bad.json()) as any).error).toMatch(/Unknown landmark/);
 
     const merge = await fetch(s.base + "/api/realms/a/absorb", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ other: "b" }) });
     expect(merge.status).toBe(200);
@@ -42,6 +44,12 @@ test("serves the page, the state and realm edits", async () => {
     const portal = await fetch(s.base + "/api/sessions/abc/portal", { method: "POST" });
     expect(await portal.json()).toEqual({ ok: true, precision: "exact", message: "Opened." });
     expect((await fetch(s.base + "/api/sessions/zzz/portal", { method: "POST" })).status).toBe(404);
+
+    const post = (u: string, b: unknown) => fetch(s.base + u, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) });
+    expect(await (await post("/api/sessions/abc/send", { text: "go with b" })).json()).toEqual({ ok: true, message: "sent go with b" });
+    expect(await (await post("/api/sessions/abc/seal", { decision: "grant" })).json()).toEqual({ ok: true, message: "grant" });
+    expect((await post("/api/sessions/abc/seal", { decision: "maybe" })).status).toBe(400);
+    expect((await post("/api/sessions/zzz/send", { text: "x" })).status).toBe(404);
   } finally { s.app.close(); }
 });
 

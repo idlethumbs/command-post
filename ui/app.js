@@ -126,7 +126,7 @@ function renderRealm(entering) {
   $("#view").innerHTML = `<div class="realm${entering ? " in" : ""}">
     <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${tint(r.banner, .15)}">${esc(r.name)}</h2>
       <span class="meta">${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}</span>
-      <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>P</kbd> portal · <kbd>esc</kbd> map</span>
+      <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>R</kbd> reply · <kbd>P</kbd> portal · <kbd>esc</kbd> map</span>
       ${r.id === "wilds" ? "" : `<button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button>`}</div></div>
     ${ui.charter ? `<section class="card charter" id="charter"></section>` : ""}
     <section class="scene" id="scene" aria-label="Mages in ${esc(r.name)}"><div class="troupe" id="troupe"></div></section>
@@ -173,8 +173,62 @@ async function openPortal(id, btn) {
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-portal]"); if (b) openPortal(b.dataset.portal, b); });
 
+function sealBlock(s) {
+  if (!s.seal) return `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req">A permission prompt is open in its terminal.</div>
+    <div class="btns">${portalButton(s)}<span class="soon-note">${esc(s.where)} can't be sent keys, so answer it there.</span></div></div>`;
+  return `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req" id="sealReq">Reading the prompt…</div>
+    <div class="btns"><button class="btn" data-seal="grant">Grant seal</button><button class="btn deny" data-seal="refuse">Refuse</button>${portalButton(s)}
+    <span class="hint">Presses Yes or No in its prompt</span></div></div>`;
+}
+function wordBlock(s) {
+  if (s.reply !== "type") return `<div class="orders"><span class="lbl">Send word</span>
+    <div class="via">${esc(s.where)} can't be typed into from Arcanum. Open it to reply; sessions in cmux, Terminal or iTerm can be answered from here.</div>
+    <div class="btns">${portalButton(s)}</div></div>`;
+  const multi = s.host === "cmux";
+  return `<form class="orders" id="orders"><label class="lbl" for="reply">Send word</label>
+    <textarea id="reply" placeholder="${s.state === "cast" ? "It's casting. Your word waits until it finishes…" : "Type your reply…"}" ${multi ? "" : 'rows="2"'}></textarea>
+    <div class="via">Typed into its ${esc(s.where)} prompt as if you were there.${multi ? "" : " One line only for now."} If you've left a half-typed draft there, Arcanum won't touch it.</div>
+    <div class="btns"><button class="btn" type="submit">Send word</button>${portalButton(s)}
+    <span class="hint"><kbd>⌘</kbd> + <kbd>⏎</kbd> send</span></div></form>`;
+}
+const drafts = {};   // unsent text per mage survives live re-renders
+async function post(url, body) {
+  try { const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); return await r.json(); }
+  catch { return { ok: false, message: "The Arcanum daemon isn't answering." }; }
+}
+function wireComms(s) {
+  const f = $("#orders");
+  if (f) {
+    const ta = $("#reply");
+    ta.value = drafts[s.id] ?? "";
+    ta.oninput = () => { drafts[s.id] = ta.value; };
+    ta.onkeydown = e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); f.requestSubmit(); } };
+    f.onsubmit = async e => {
+      e.preventDefault();
+      const text = ta.value.trim(); if (!text) return toast("Write something first");
+      const btn = f.querySelector("[type=submit]"); btn.disabled = true; btn.textContent = "Sending…";
+      const r = await post(`/api/sessions/${encodeURIComponent(s.id)}/send`, { text });
+      toast(r.message ?? r.error);
+      if (r.ok) { delete drafts[s.id]; ta.value = ""; }
+      btn.disabled = false; btn.textContent = "Send word";
+    };
+  }
+  document.querySelectorAll("[data-seal]").forEach(b => b.onclick = async () => {
+    document.querySelectorAll("[data-seal]").forEach(x => x.disabled = true);
+    const r = await post(`/api/sessions/${encodeURIComponent(s.id)}/seal`, { decision: b.dataset.seal });
+    toast(r.message ?? r.error);
+    document.querySelectorAll("[data-seal]").forEach(x => x.disabled = false);
+  });
+  const req = $("#sealReq");
+  if (req) fetch(`/api/sessions/${encodeURIComponent(s.id)}/seal`).then(r => r.json()).then(j => {
+    if (!req.isConnected) return;
+    req.textContent = j.request ? `${j.request}\n\n${j.question}` : "Couldn't read the prompt. Open the portal to see it.";
+    req.style.whiteSpace = "pre-wrap";
+  }).catch(() => {});
+}
+
 function renderComms(s) {
-  const st = STATE[s.state], relay = s.host !== "cmux";
+  const st = STATE[s.state];
   $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
       <h3>${esc(s.name)}</h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
@@ -185,15 +239,9 @@ function renderComms(s) {
     ${s.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(s.title)}</b></div>` : ""}
     <div class="paper"><span class="lbl">The matter at hand</span><p>${esc(s.briefing)}</p></div>
     <div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${missive(s.lastText)}</div>
-    ${s.state === "seal"
-      ? `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req">A permission prompt is open in its terminal.</div>
-         <div class="btns"><button class="btn" disabled>Grant seal</button><button class="btn deny" disabled>Refuse</button>${portalButton(s)}
-         <span class="soon-note">Approving from here arrives in M3. Open the portal to answer it now.</span></div></div>`
-      : `<div class="orders"><label class="lbl" for="reply">Send word</label>
-         <textarea id="reply" disabled placeholder="Replying from Arcanum arrives in M3. For now, open the portal and answer there."></textarea>
-         <div class="btns"><button class="btn" disabled>${relay ? "Send by raven" : "Send word"}</button>${portalButton(s)}
-         <span class="soon-note">${relay ? `Lives outside cmux, so replies will go by raven (relayed).` : `Lives in cmux, so replies will be typed straight into its pane.`}</span></div></div>`}`;
+    ${s.state === "seal" ? sealBlock(s) : wordBlock(s)}`;
   $("#portrait").appendChild(makeMage(s, 3, `${RANK[s.model].title} ${s.name}`));
+  wireComms(s);
 }
 
 /* ---------------- charter: edits go to ~/.arcanum/realms.json via the daemon ---------------- */
@@ -254,6 +302,7 @@ document.addEventListener("keydown", e => {
     if (e.key === "-") map.zoom(1 / 1.35);
   } else if (ui.view === "realm") {
     if (e.key === "Escape") return goMap();
+    if (e.key === "r" || e.key === "R") { const t = $("#reply"); if (t) { e.preventDefault(); t.focus(); } return; }
     if (e.key === "p" || e.key === "P") { const b = document.querySelector("[data-portal]"); if (b) openPortal(b.dataset.portal, b); return; }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault(); const ids = [...document.querySelectorAll(".crow")].map(b => b.dataset.session);
@@ -275,7 +324,9 @@ function onData(next) {
   } else {
     // don't yank the charter out from under someone typing a name
     if (document.activeElement?.id === "rname") return renderSide();
+    const typing = document.activeElement?.id === "reply";
     const sc = $("#view").scrollTop; renderRealm(); $("#view").scrollTop = sc;
+    if (typing) { const t = $("#reply"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
   }
 }
 function connect() {

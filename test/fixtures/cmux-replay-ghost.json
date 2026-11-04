@@ -1,0 +1,229 @@
+{
+ "render_grid": {
+  "rows": 35,
+  "columns": 99,
+  "cursor": {
+   "blinking": true,
+   "column": 2,
+   "row": 30,
+   "style": "block",
+   "visible": true
+  },
+  "styles": [
+   {
+    "id": 0,
+    "faint": false
+   },
+   {
+    "id": 6,
+    "faint": false
+   },
+   {
+    "id": 14,
+    "faint": false
+   },
+   {
+    "id": 15,
+    "faint": true
+   }
+  ],
+  "row_spans": [
+   {
+    "cell_width": 1,
+    "column": 0,
+    "row": 27,
+    "style_id": 6,
+    "text": "✻"
+   },
+   {
+    "cell_width": 1,
+    "column": 1,
+    "row": 27,
+    "style_id": 0,
+    "text": " "
+   },
+   {
+    "cell_width": 26,
+    "column": 2,
+    "row": 27,
+    "style_id": 6,
+    "text": "Brewed for 1s · done 15:10"
+   },
+   {
+    "cell_width": 99,
+    "column": 0,
+    "row": 29,
+    "style_id": 14,
+    "text": "───────────────────────────────────────────────────────────────────────────────────────────────────"
+   },
+   {
+    "cell_width": 2,
+    "column": 0,
+    "row": 30,
+    "style_id": 0,
+    "text": "❯ "
+   },
+   {
+    "cell_width": 6,
+    "column": 2,
+    "row": 30,
+    "style_id": 15,
+    "text": "ls -la"
+   },
+   {
+    "cell_width": 99,
+    "column": 0,
+    "row": 31,
+    "style_id": 14,
+    "text": "───────────────────────────────────────────────────────────────────────────────────────────────────"
+   },
+   {
+    "cell_width": 2,
+    "column": 2,
+    "row": 32,
+    "style_id": 6,
+    "text": "🧠"
+   },
+   {
+    "cell_width": 5,
+    "column": 5,
+    "row": 32,
+    "style_id": 6,
+    "text": "haiku"
+   },
+   {
+    "cell_width": 3,
+    "column": 11,
+    "row": 32,
+    "style_id": 6,
+    "text": "4.5"
+   },
+   {
+    "cell_width": 1,
+    "column": 15,
+    "row": 32,
+    "style_id": 6,
+    "text": "·"
+   },
+   {
+    "cell_width": 2,
+    "column": 17,
+    "row": 32,
+    "style_id": 6,
+    "text": "🧵"
+   },
+   {
+    "cell_width": 3,
+    "column": 20,
+    "row": 32,
+    "style_id": 6,
+    "text": "21%"
+   },
+   {
+    "cell_width": 1,
+    "column": 24,
+    "row": 32,
+    "style_id": 6,
+    "text": "·"
+   },
+   {
+    "cell_width": 2,
+    "column": 26,
+    "row": 32,
+    "style_id": 6,
+    "text": "🚦"
+   },
+   {
+    "cell_width": 3,
+    "column": 29,
+    "row": 32,
+    "style_id": 6,
+    "text": "13%"
+   },
+   {
+    "cell_width": 1,
+    "column": 33,
+    "row": 32,
+    "style_id": 6,
+    "text": "·"
+   },
+   {
+    "cell_width": 2,
+    "column": 35,
+    "row": 32,
+    "style_id": 6,
+    "text": "⏳"
+   },
+   {
+    "cell_width": 2,
+    "column": 38,
+    "row": 32,
+    "style_id": 6,
+    "text": "4h"
+   },
+   {
+    "cell_width": 2,
+    "column": 41,
+    "row": 32,
+    "style_id": 6,
+    "text": "8m"
+   },
+   {
+    "cell_width": 1,
+    "column": 2,
+    "row": 33,
+    "style_id": 6,
+    "text": "⏸"
+   },
+   {
+    "cell_width": 6,
+    "column": 4,
+    "row": 33,
+    "style_id": 6,
+    "text": "manual"
+   },
+   {
+    "cell_width": 4,
+    "column": 11,
+    "row": 33,
+    "style_id": 6,
+    "text": "mode"
+   },
+   {
+    "cell_width": 2,
+    "column": 16,
+    "row": 33,
+    "style_id": 6,
+    "text": "on"
+   },
+   {
+    "cell_width": 1,
+    "column": 19,
+    "row": 33,
+    "style_id": 6,
+    "text": "·"
+   },
+   {
+    "cell_width": 1,
+    "column": 21,
+    "row": 33,
+    "style_id": 6,
+    "text": "←"
+   },
+   {
+    "cell_width": 1,
+    "column": 23,
+    "row": 33,
+    "style_id": 6,
+    "text": "6"
+   },
+   {
+    "cell_width": 6,
+    "column": 25,
+    "row": 33,
+    "style_id": 6,
+    "text": "agents"
+   }
+  ]
+ }
+}

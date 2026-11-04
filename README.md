@@ -19,10 +19,26 @@ Drag to pan, scroll or pinch to zoom, `0` to fit all realms, `←`/`→` + `⏎`
 |---|---|
 | Reads | `~/.claude/sessions/*.json` (live session registry), the tail of each live session's transcript under `~/.claude/projects/`, `ps` (to check that sessions are alive and which terminal hosts them), `git rev-parse` (to group folders into realms) |
 | Writes | `~/.arcanum/realms.json` only: discovered realms and your charter edits (names, landmarks, banners, merges). Safe to edit by hand or delete. |
-| Runs | Only when you click Open portal: `cmux`, `osascript`, `tmux` or `open`, with arguments taken from `ps` and cmux, never through a shell |
+| Runs | Only when you click Open portal, Send word, or Grant/Refuse: `cmux`, `osascript`, `tmux` or `open`, with arguments taken from `ps` and cmux, never through a shell |
 | Never | Claude Code settings, hooks or transcripts |
 
-Replying (M3) appears but is disabled.
+## Send word and seals
+
+In a realm, **Send word** (`R`, then `⌘⏎`) types your reply into the session's own prompt, so Claude records it as you typing.
+
+| Where it runs | Send word | Grant / Refuse a permission prompt |
+|---|---|---|
+| cmux | Yes, multi-line (delivered as a paste) | Yes: presses the prompt's own Yes / No option |
+| tmux | One line | Yes |
+| Terminal.app / iTerm | One line (AppleScript) | No, so open the portal |
+| Warp / VS Code / background | No: they can't be typed into, so open them instead | No |
+
+Arcanum reads the screen before it types, and refuses rather than guessing:
+- if you've left a half-typed draft in that prompt (Claude's grey suggestions don't count)
+- if a permission or question dialog is open
+- if the session is in shell mode
+
+Sending while a session is casting queues your word until it finishes.
 
 ## Open portal
 
