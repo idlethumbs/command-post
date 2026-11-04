@@ -284,7 +284,7 @@ function renderComms(s) {
     <div class="paper brief"><span class="lbl">The matter at hand</span><p>${esc(s.briefing)}</p></div>
     <div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${missive(s.lastText)}</div>
     ${s.state === "seal" ? sealBlock(s) : wordBlock(s)}`;
-  $("#portrait").appendChild(makeMage(s, 2, `${RANK[s.model].title} ${s.name}`));
+  $("#portrait").appendChild(makeMage(s, 1, `${RANK[s.model].title} ${s.name}`));
   wireComms(s);
 }
 
