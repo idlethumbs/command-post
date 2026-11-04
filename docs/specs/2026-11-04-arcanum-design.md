@@ -1,6 +1,6 @@
 # Arcanum — design spec
 
-**Status:** draft v2 for product review · 2026-11-04 (v1 had a military theme; changed after feedback)
+**Status:** draft v3 · 2026-11-04. Product decisions so far: magic theme (v1 soldiers rejected); realm = repo with merge overrides (§3.1, approved); full-screen map plus sidebar; painted-VGA art.
 **Prototype:** `docs/prototype/command-post.html` (published: https://claude.ai/artifact/7fZCWFQ7Ye6RMRcjPnKBAy). Sample data, no backend.
 
 ## 1. Problem
@@ -33,7 +33,7 @@ One metaphor throughout, so every UI element has an in-world name.
 | Focus terminal | **Open portal** | |
 | Open a realm | **Fast travel** | The map zooms into the landmark, then the realm materialises |
 
-Visual language: 16-bit JRPG overworld. Indigo night chrome, parchment for anything Claude wrote, biome-tiled scenes. Fonts: Jacquard 24 (pixel blackletter, used only for realm and page titles), Silkscreen (labels and data), Pixelify Sans (readable body). Sprites and landmarks are drawn procedurally from rectangles with an automatic 1px outline, so there's no asset pipeline yet, and rank × state × frame variants are cheap. The data model (§4) is theme-agnostic, so the theme stays a skin.
+Visual language: see §4.4. Indigo night chrome, and parchment for anything Claude wrote. The data model (§5) is theme-agnostic, so the theme stays a skin.
 
 ## 3. Realms
 
@@ -51,19 +51,31 @@ Map layout: each realm owns a position. Land grows around it with noise, and eac
 
 ## 4. Screens
 
-### 4.1 World map (overview)
-- **Header stats:** realms · mages · seek counsel · await a seal · casting.
-- **Ravens:** the 5 latest state changes that matter (counsel / seal / casting started), across all realms, newest first. Clicking one fast-travels to that mage.
-- **The Known Realms:** a pixel overworld. Each realm shows its landmark and a tag with its name plus `!n ?n ✦n` pins. Arrow keys cycle through realms (waiting-first, then newest). Enter fast-travels.
+The app is a full-height shell: a **persistent left sidebar** plus a **main stage**. The world map fills the stage, and realm views open inside it.
 
-### 4.2 Realm view
-- **Scene:** biome ground, the landmark, and every live mage standing with their state bubble. Click a mage to select it.
-- **Circle:** a compact list of the same mages, waiting-first, then newest, with rank, age and a state chip.
-- **Comms panel:** portrait, rank/model, state and duration, where it lives (cmux pane / Warp / VS Code / background); **The matter at hand** (briefing); **Latest missive** (last assistant text); then **Send word** or, for permission requests, the tool call with **Grant seal / Refuse**. **Open portal** is always offered.
+### 4.1 Sidebar (always visible)
+- **Brand + summary:** realms · mages · casting.
+- **Navigation:** World map · **Scry** (search mages by name, realm, rank or topic; ⌘K) · Summon a mage (M5) · Archive of the departed (M5) · Grimoire, i.e. settings: sound, hooks status, theme (M3+). Items that come later are shown but disabled and labelled LATER, so the nav doesn't change shape as features arrive.
+- **Waiting on you:** `! n counsel` `? n seal` counts and a **Next ▸** button (same as `N`), which goes to the newest unanswered request across realms.
+- **Ravens:** every mage's latest state change, newest first, filterable *All / Needs you*. Each shows a realm colour dot, name · realm, state glyph, age and a two-line excerpt. Unread requests carry a dot until you open that mage. Resting mages are dimmed.
+- Below 900px wide, the sidebar stacks under the stage.
+
+### 4.2 World map (stage)
+- A painted overworld that fills the stage. The **newest request floats as a raven banner** under the title scroll; clicking it fast-travels to that mage.
+- Each realm is a region with its landmark and a tag with its name plus `!n ?n ✦n` pins. Arrow keys cycle through realms (waiting-first, then newest). Enter fast-travels: the map zooms into the landmark with a light flash, and the realm materialises.
+- Overlays: legend (bottom-left) and key hints (bottom-right), plus a dev-only "simulate a discovery" button in the prototype.
+
+### 4.3 Realm view (stage)
+- **Scene:** a painted backdrop for the realm's biome (sky, two hill layers, ground), the landmark at 2× detail, and every live mage standing with their state bubble. Click a mage to select it.
+- **Circle:** a compact list of the same mages, waiting-first, then newest.
+- **Comms panel:** portrait, rank/model, state and duration, where it lives; **The matter at hand** (briefing); **Latest missive**; **Send word** / **Send by raven**, or **Grant seal / Refuse** for permission requests; **Open portal** always.
 - **Edit realm** opens the charter (name, landmark, banner, lands, absorb another realm).
 
-### 4.3 Controls
-Keyboard-first like a game: arrows, Enter to travel, Esc back to the map, `R` reply, ⌘⏎ send, `N` jumps to the next session waiting on you, newest first, across realms. Mouse works everywhere.
+### 4.4 Art direction
+Painted-VGA, closer to *Monkey Island 2* than *1*. Everything is drawn with vector paths and gradients at a low native resolution, then upscaled ×3 with hard pixels, so shapes are smooth and shaded while still reading as pixel art. Terrain and backdrops use ordered (Bayer) dithering across 5-step colour ramps per biome, plus hill-shading, foam lines, and subtle borders between realm regions. Characters get a soft dark outline. UI type is Pixelify Sans (rounded, readable). Jacquard 24 is used only for the app, map and realm titles.
+
+### 4.5 Controls
+Arrows, Enter to travel, Esc back to the map, `R` reply, ⌘⏎ send, `N` next waiting mage, ⌘K scry. Mouse works everywhere.
 
 ## 5. Architecture
 

@@ -1,230 +1,300 @@
 <meta charset="utf-8">
 <title>Arcanum</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Silkscreen&family=Pixelify+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
 <style>
   :root {
     color-scheme: dark;
-    --night: #17142b;      /* chrome */
-    --panel: #262046;      /* dialog boxes */
+    --night: #141127;      /* chrome */
+    --panel: #221d3f;      /* sidebar + dialogs */
+    --panel-hi: #2f2858;
     --frame: #4a3f7a;
-    --parch: #efe3c2;      /* parchment */
-    --ink: #120f22;
-    --gold: #f2c14e;       /* seals, rank, selection */
-    --counsel: #e8486b;    /* seeks counsel (wants a reply) */
-    --cast: #6fe3ff;       /* casting (working) */
-    --muted: #9a92c4;
-    --sea: #1d3b6e;
+    --parch: #f0e4c4;      /* parchment: anything Claude wrote */
+    --parch-ink: #2a2016;
+    --ink: #0f0c1e;
+    --gold: #f2c14e;       /* seals, selection */
+    --counsel: #ef5470;    /* seeks counsel (wants a reply) */
+    --cast: #74e0f7;       /* casting (working) */
+    --muted: #a39bcb;
     --f-display: "Jacquard 24", "Pixelify Sans", serif;
-    --f-label: "Silkscreen", ui-monospace, monospace;
-    --f-body: "Pixelify Sans", ui-rounded, system-ui, sans-serif;
+    --f-ui: "Pixelify Sans", ui-rounded, system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
-  body {
-    background: var(--night); color: var(--parch); font-family: var(--f-body); font-size: 17px;
-    padding-inline: 16px; padding-block: 16px 40px;
-  }
+  body { margin: 0; background: var(--night); color: var(--parch); font-family: var(--f-ui); font-size: 16px; }
   canvas { image-rendering: pixelated; display: block; }
-  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
-  .px {
-    background: var(--panel);
-    box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--frame), 0 0 0 9px var(--ink), 6px 6px 0 9px rgba(0,0,0,.35);
-    margin: 9px;
+  button { font: inherit; color: inherit; }
+  .lbl { font-family: var(--f-ui); font-weight: 600; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  kbd { font-family: var(--f-ui); font-size: 11px; font-weight: 600; background: var(--ink); border: 1px solid var(--frame); border-radius: 3px; padding: 0 5px; color: var(--parch); }
+
+  /* ---------- app shell: sidebar + main stage ---------- */
+  .app { display: grid; grid-template-columns: 312px minmax(0, 1fr); height: 100%; }
+  .side {
+    background: linear-gradient(180deg, var(--panel), #1b1734); border-right: 3px solid var(--ink); box-shadow: inset -2px 0 0 var(--frame);
+    overflow-y: auto; overflow-x: hidden; padding: 16px; display: flex; flex-direction: column; gap: 18px; min-height: 0;
   }
-  .lbl { font-family: var(--f-label); font-size: 12px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
-  kbd { font-family: var(--f-label); font-size: 11px; background: var(--ink); border: 2px solid var(--frame); padding: 0 5px; color: var(--parch); }
-  .hint { font-family: var(--f-label); font-size: 11px; color: var(--muted); }
-
-  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; justify-content: space-between; }
-  .logo { display: flex; align-items: center; gap: 12px; }
-  .logo h1 { font-family: var(--f-display); font-weight: 400; font-size: 52px; line-height: .8; margin: 0; color: var(--gold); text-shadow: 3px 3px 0 var(--ink); }
-  .logo small { display: block; margin-top: 6px; }
-  .stats { display: flex; flex-wrap: wrap; gap: 8px; }
-  .stat { font-family: var(--f-label); font-size: 12px; padding: 4px 9px; background: var(--ink); border: 2px solid var(--frame); }
-  .stat b { font-size: 14px; margin-right: 6px; }
-  .stat.counsel b { color: var(--counsel); } .stat.seal b { color: var(--gold); } .stat.cast b { color: var(--cast); }
-  .sample { font-family: var(--f-label); font-size: 11px; color: var(--ink); background: var(--gold); padding: 3px 8px; }
-
-  /* ravens feed */
-  .ravens { padding: 12px 14px 10px; }
-  .ravens h2 { margin: 0 0 8px; display: flex; gap: 10px; align-items: center; }
-  .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-  .feed button {
-    all: unset; cursor: pointer; width: 100%; display: grid; grid-template-columns: 50px 22px minmax(0, 140px) 1fr; gap: 10px;
-    align-items: baseline; padding: 4px 6px; font-size: 16px;
+  .stage { min-width: 0; min-height: 0; overflow: auto; padding: 16px; position: relative; }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; height: auto; }
+    .side { order: 2; border-right: 0; box-shadow: none; border-top: 3px solid var(--ink); }
+    .stage { overflow: visible; }
   }
-  .feed button:hover, .feed button:focus-visible { background: var(--frame); outline: none; }
-  .feed .t { font-family: var(--f-label); font-size: 12px; color: var(--muted); }
-  .feed .k { font-family: var(--f-label); font-size: 13px; }
-  .feed .who { font-family: var(--f-label); font-size: 12px; color: var(--gold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .feed .msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .c-counsel { color: var(--counsel); } .c-seal { color: var(--gold); } .c-cast { color: var(--cast); } .c-rest { color: var(--muted); }
 
-  /* world map */
-  .map-h { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-inline: 9px; }
-  .map-h h2 { font-family: var(--f-display); font-weight: 400; font-size: 38px; line-height: 1; margin: 0; }
-  .map-h .right { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .worldframe { overflow: hidden; position: relative; padding: 0; }
-  .world { position: relative; aspect-ratio: 96 / 60; max-width: 100%; width: 100%; transform-origin: 50% 50%; }
-  .world.zoom { transform: scale(4); filter: brightness(1.7); transition: transform .5s steps(8), filter .5s steps(8); }
+  /* sidebar: brand */
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 { font-family: var(--f-display); font-weight: 400; font-size: 44px; line-height: .8; margin: 0; color: var(--gold); text-shadow: 2px 2px 0 var(--ink); }
+  .brand p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+  .sample { align-self: flex-start; font-size: 11px; font-weight: 600; letter-spacing: 1px; color: var(--ink); background: var(--gold); padding: 2px 7px; border-radius: 2px; }
+
+  /* sidebar: nav */
+  .nav { display: grid; gap: 2px; }
+  .nav button {
+    all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center;
+    padding: 7px 10px; border-radius: 4px; font-size: 15px;
+  }
+  .nav button:hover { background: var(--panel-hi); }
+  .nav button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+  .nav button[aria-current="page"] { background: var(--panel-hi); box-shadow: inset 3px 0 0 var(--gold); }
+  .nav button[aria-disabled="true"] { color: var(--muted); cursor: default; }
+  .nav .ico { color: var(--gold); text-align: center; font-size: 15px; }
+  .nav .soon { font-size: 10px; font-weight: 600; letter-spacing: 1px; color: var(--muted); border: 1px solid var(--frame); padding: 0 5px; border-radius: 2px; }
+  .scry { display: grid; gap: 6px; }
+  .scry input {
+    width: 100%; background: var(--ink); color: var(--parch); border: 2px solid var(--frame); border-radius: 4px; padding: 7px 9px; font: inherit; font-size: 15px;
+  }
+  .scry input:focus { outline: none; border-color: var(--gold); }
+  .results { display: grid; gap: 2px; }
+
+  /* sidebar: awaiting you */
+  .await { display: grid; gap: 8px; }
+  .await .row2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pill { font-size: 13px; font-weight: 600; padding: 3px 8px; border-radius: 3px; color: var(--ink); }
+  .pill.counsel { background: var(--counsel); color: #fff; } .pill.seal { background: var(--gold); } .pill.cast { background: var(--cast); }
+  .next { all: unset; box-sizing: border-box; cursor: pointer; margin-left: auto; font-size: 13px; font-weight: 600; padding: 4px 9px; border-radius: 3px; background: var(--parch); color: var(--parch-ink); }
+  .next:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* sidebar: ravens */
+  .ravens { display: grid; gap: 8px; min-height: 0; }
+  .ravens-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .tabs { display: inline-flex; background: var(--ink); border-radius: 4px; padding: 2px; }
+  .tabs button { all: unset; box-sizing: border-box; cursor: pointer; white-space: nowrap; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 3px; color: var(--muted); }
+  .tabs button[aria-pressed="true"] { background: var(--panel-hi); color: var(--parch); }
+  .tabs button:focus-visible { outline: 2px solid var(--gold); }
+  .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .raven {
+    all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 10px 1fr auto; gap: 4px 9px; align-items: start; width: 100%;
+    padding: 8px 9px; border-radius: 4px; background: rgba(15,12,30,.35);
+  }
+  .raven:hover { background: var(--panel-hi); }
+  .raven:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+  .raven .dot { width: 8px; height: 8px; border-radius: 1px; margin-top: 5px; }
+  .raven .who { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .raven .who small { font-weight: 400; color: var(--muted); }
+  .raven .t { font-size: 12px; color: var(--muted); white-space: nowrap; display: flex; gap: 6px; align-items: center; }
+  .raven .msg { grid-column: 2 / 4; font-size: 14px; line-height: 1.35; color: #d9d0b6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .raven.unread .who::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--counsel); margin-right: 6px; vertical-align: 2px; }
+  .raven.dim { opacity: .62; }
+  .g { font-weight: 700; } .g.counsel { color: var(--counsel); } .g.seal { color: var(--gold); } .g.cast { color: var(--cast); } .g.rest { color: var(--muted); }
+
+  /* ---------- map ---------- */
+  .mapwrap { position: relative; height: 100%; min-height: 520px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame), 0 10px 30px rgba(0,0,0,.45); background: #10284f; }
+  @media (max-width: 900px) { .mapwrap { height: 72vh; min-height: 420px; } }
+  .world { position: absolute; inset: 0; transform-origin: 50% 50%; }
+  .world.zoom { transform: scale(2.8); transition: transform .55s cubic-bezier(.55, 0, .85, .35); }
   .world > canvas.terrain { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .site {
-    all: unset; cursor: pointer; position: absolute; translate: -50% -78%; display: grid; justify-items: center; gap: 2px;
-  }
-  .site .tag {
-    display: flex; gap: 6px; align-items: center; font-family: var(--f-label); font-size: 11px; background: var(--ink); color: var(--parch);
-    padding: 2px 6px; white-space: nowrap; box-shadow: 0 0 0 2px var(--frame);
-  }
-  .site .pin { display: inline-flex; gap: 3px; }
-  .site .pin i { font-style: normal; padding: 0 4px; color: var(--ink); }
-  .site .pin i.counsel { background: var(--counsel); color: var(--parch); } .site .pin i.seal { background: var(--gold); }
-  .site .pin i.cast { background: var(--cast); }
-  .site:hover .tag, .site:focus-visible .tag, .site.sel .tag { box-shadow: 0 0 0 2px var(--gold); outline: none; }
+  .flash { position: absolute; inset: 0; background: #fff8e0; opacity: 0; pointer-events: none; }
+  .flash.on { opacity: 1; transition: opacity .5s ease-in .1s; }
+  .site { all: unset; box-sizing: border-box; cursor: pointer; position: absolute; translate: -50% -82%; display: grid; justify-items: center; gap: 0; }
   .site:focus-visible { outline: none; }
-  .site.sel canvas { animation: hop .7s steps(2) infinite; }
-  .site .new { font-family: var(--f-label); font-size: 10px; background: var(--gold); color: var(--ink); padding: 0 4px; animation: blink 1s steps(2) infinite; }
-  @keyframes hop { 50% { translate: 0 -3px; } }
-  @keyframes bhop { 50% { translate: -50% -3px; } }
-  @keyframes blink { 50% { opacity: .25; } }
-  .legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 8px 12px; font-family: var(--f-label); font-size: 11px; color: var(--muted); background: var(--ink); }
-
-  /* realm */
-  .realm-in { animation: materialize .45s steps(5); }
-  @keyframes materialize { from { opacity: 0; filter: brightness(2.2); } to { opacity: 1; filter: none; } }
-  .realm-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-inline: 9px; }
-  .realm-top h2 { font-family: var(--f-display); font-weight: 400; font-size: 42px; line-height: 1; margin: 0; }
-  .realm-top .lands { font-family: var(--f-label); font-size: 11px; color: var(--muted); }
-  .realm-top .right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .scene {
-    position: relative; min-height: 190px; display: flex; align-items: flex-end; gap: 18px; padding: 16px 20px 14px 150px; flex-wrap: wrap;
-    background-image: var(--biome-tile); background-size: 48px 48px;
+  .site .tag {
+    display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; background: rgba(15,12,30,.88); color: var(--parch);
+    padding: 3px 8px; border-radius: 3px; white-space: nowrap; box-shadow: 0 0 0 1px var(--frame); margin-top: -4px;
   }
-  .scene .landmark { position: absolute; left: 14px; bottom: 10px; }
-  @media (max-width: 640px) { .scene { padding-left: 20px; padding-top: 120px; } .scene .landmark { top: 8px; bottom: auto; } }
-  .mage { all: unset; cursor: pointer; position: relative; display: grid; justify-items: center; gap: 4px; }
-  .mage .name { font-family: var(--f-label); font-size: 10px; background: rgba(18,15,34,.85); padding: 1px 5px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .site .pin i { font-style: normal; font-size: 12px; padding: 0 5px; border-radius: 2px; color: var(--ink); margin-left: 3px; }
+  .site .pin i.counsel { background: var(--counsel); color: #fff; } .site .pin i.seal { background: var(--gold); } .site .pin i.cast { background: var(--cast); }
+  .site:hover .tag, .site:focus-visible .tag, .site.sel .tag { box-shadow: 0 0 0 2px var(--gold); }
+  .site.sel::before {
+    content: "▼"; position: absolute; top: -16px; color: var(--gold); font-size: 14px; text-shadow: 1px 1px 0 var(--ink); animation: bob 1s ease-in-out infinite;
+  }
+  .site .new { font-size: 10px; letter-spacing: 1px; background: var(--gold); color: var(--ink); padding: 0 4px; border-radius: 2px; animation: blink 1s steps(2) infinite; }
+  @keyframes bob { 50% { translate: 0 -3px; } }
+  @keyframes blink { 50% { opacity: .3; } }
+
+  .overlay { position: absolute; z-index: 2; }
+  .title-scroll {
+    top: 14px; left: 14px; padding: 6px 18px 8px; background: linear-gradient(180deg, #f6ebcd, #e2d0a2); color: var(--parch-ink);
+    border-radius: 3px; box-shadow: 0 0 0 2px #8a6a3a, 0 0 0 4px var(--ink), 4px 6px 0 2px rgba(0,0,0,.35);
+  }
+  .title-scroll h2 { font-family: var(--f-display); font-weight: 400; font-size: 36px; line-height: 1; margin: 0; }
+  .latest {
+    all: unset; box-sizing: border-box; position: absolute; z-index: 2; cursor: pointer; top: 80px; left: 14px; max-width: min(560px, calc(100% - 28px));
+    display: flex; gap: 10px; align-items: center; padding: 8px 14px; background: rgba(15,12,30,.9); border-radius: 4px;
+    box-shadow: 0 0 0 2px var(--counsel), 0 6px 18px rgba(0,0,0,.4); animation: fly .6s cubic-bezier(.2, .8, .3, 1.2);
+  }
+  .latest:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  .latest .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .latest .txt b { color: var(--counsel); }
+  @keyframes fly { from { translate: 0 -30px; opacity: 0; } }
+  .tools { top: 14px; right: 14px; display: flex; gap: 8px; }
+  .legend {
+    left: 14px; bottom: 14px; display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 10px; border-radius: 3px; font-size: 13px;
+    background: rgba(15,12,30,.8); color: var(--muted); max-width: calc(100% - 28px);
+  }
+  .keys { right: 14px; bottom: 14px; font-size: 13px; color: var(--muted); background: rgba(15,12,30,.8); padding: 6px 10px; border-radius: 3px; }
+  @media (max-width: 700px) { .keys { display: none; } }
+
+  .btn {
+    all: unset; box-sizing: border-box; cursor: pointer; font-size: 14px; font-weight: 600; padding: 8px 13px; border-radius: 4px; color: var(--parch-ink);
+    background: linear-gradient(180deg, #ffd977, var(--gold)); box-shadow: 0 0 0 2px var(--ink), 0 3px 0 2px var(--ink);
+  }
+  .btn:active { translate: 0 2px; box-shadow: 0 0 0 2px var(--ink), 0 1px 0 2px var(--ink); }
+  .btn:focus-visible { outline: 2px dashed var(--parch); outline-offset: 4px; }
+  .btn.alt { background: linear-gradient(180deg, #fff6dc, #e6d6aa); }
+  .btn.deny { background: linear-gradient(180deg, #ff7a90, var(--counsel)); color: #fff; }
+  .btn.ghost { background: rgba(15,12,30,.88); color: var(--parch); box-shadow: 0 0 0 1px var(--frame); }
+
+  /* ---------- realm ---------- */
+  .realm { display: grid; gap: 14px; }
+  .realm.in { animation: materialize .5s ease-out; }
+  @keyframes materialize { from { opacity: 0; filter: brightness(2); } }
+  .realm-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .realm-top h2 { font-family: var(--f-display); font-weight: 400; font-size: 46px; line-height: 1; margin: 0; text-shadow: 2px 2px 0 var(--ink); }
+  .realm-top .meta { font-size: 14px; color: var(--muted); }
+  .realm-top .right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .scene { position: relative; height: 300px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
+  .scene > canvas.backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .scene .landmark { position: absolute; left: 18px; bottom: 26px; }
+  .troupe { position: absolute; left: 230px; right: 12px; bottom: 6px; display: flex; gap: 6px; align-items: flex-end; overflow-x: auto; padding-top: 30px; }
+  @media (max-width: 640px) { .scene .landmark { display: none; } .troupe { left: 8px; } }
+  .mage { all: unset; box-sizing: border-box; cursor: pointer; position: relative; display: grid; justify-items: center; flex: none; }
+  .mage .name { font-size: 12px; font-weight: 600; background: rgba(15,12,30,.85); padding: 1px 7px; border-radius: 3px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: -6px; }
   .mage.sel .name, .mage:focus-visible .name { background: var(--gold); color: var(--ink); }
   .mage:focus-visible { outline: none; }
   .bubble {
-    position: absolute; top: -14px; left: 50%; translate: -50% 0; font-family: var(--f-label); font-size: 12px; line-height: 1;
-    padding: 3px 5px; background: var(--parch); color: var(--ink); box-shadow: 0 0 0 2px var(--ink); animation: bhop .8s steps(2) infinite;
+    position: absolute; top: -6px; left: 50%; translate: -50% 0; font-size: 15px; font-weight: 700; line-height: 1;
+    padding: 4px 7px; border-radius: 10px; background: var(--parch); color: var(--ink); box-shadow: 0 0 0 2px var(--ink); animation: bbob 1s ease-in-out infinite;
   }
-  .bubble.counsel { background: var(--counsel); color: var(--parch); } .bubble.seal { background: var(--gold); }
-  .bubble.cast { background: var(--cast); animation: none; } .bubble.rest { background: transparent; box-shadow: none; color: var(--parch); animation: drift 2s steps(4) infinite; }
-  @keyframes drift { 0% { translate: -30% 0; opacity: 0; } 50% { opacity: 1; } 100% { translate: 10% -8px; opacity: 0; } }
+  .bubble::after { content: ""; position: absolute; left: 50%; bottom: -5px; translate: -50% 0; border: 4px solid transparent; border-top-color: inherit; border-top-color: var(--bub, var(--parch)); }
+  .bubble.counsel { --bub: var(--counsel); background: var(--counsel); color: #fff; } .bubble.seal { --bub: var(--gold); background: var(--gold); }
+  .bubble.cast { --bub: var(--cast); background: var(--cast); animation: none; }
+  .bubble.rest { background: transparent; box-shadow: none; color: #fff; text-shadow: 1px 1px 0 var(--ink); animation: drift 2.4s ease-in-out infinite; }
+  .bubble.rest::after { display: none; }
+  @keyframes bbob { 50% { translate: -50% -4px; } }
+  @keyframes drift { 0% { translate: -20% 4px; opacity: 0; } 50% { opacity: 1; } 100% { translate: 20% -10px; opacity: 0; } }
 
-  .op { display: grid; grid-template-columns: minmax(240px, 320px) 1fr; gap: 12px; align-items: start; }
-  @media (max-width: 820px) { .op { grid-template-columns: 1fr; } .feed button { grid-template-columns: 44px 20px 1fr; } .feed .who { display: none; } }
-  .roster { padding: 12px; display: grid; gap: 4px; }
-  .row { all: unset; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; border: 2px solid transparent; }
-  .row:hover { background: var(--frame); }
-  .row.sel, .row:focus-visible { border-color: var(--gold); background: var(--frame); outline: none; }
-  .row .cs { font-family: var(--f-label); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-  .row .rk { font-size: 14px; color: var(--muted); }
-  .chip { font-family: var(--f-label); font-size: 10px; padding: 2px 5px; color: var(--ink); white-space: nowrap; }
-  .chip.counsel { background: var(--counsel); color: var(--parch); } .chip.seal { background: var(--gold); }
-  .chip.cast { background: var(--cast); } .chip.rest { background: var(--muted); }
+  .op { display: grid; grid-template-columns: minmax(220px, 290px) minmax(0, 1fr); gap: 14px; align-items: start; }
+  @media (max-width: 1100px) { .op { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border-radius: 6px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
+  .circle { padding: 12px; display: grid; gap: 4px; }
+  .crow { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 7px 9px; border-radius: 4px; }
+  .crow:hover { background: var(--panel-hi); }
+  .crow.sel, .crow:focus-visible { background: var(--panel-hi); box-shadow: inset 3px 0 0 var(--gold); outline: none; }
+  .crow .cs { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .crow .rk { font-size: 13px; color: var(--muted); }
+  .chip { font-size: 11px; font-weight: 700; letter-spacing: .8px; padding: 2px 6px; border-radius: 3px; color: var(--ink); white-space: nowrap; }
+  .chip.counsel { background: var(--counsel); color: #fff; } .chip.seal { background: var(--gold); } .chip.cast { background: var(--cast); } .chip.rest { background: var(--muted); }
 
   .comms { padding: 16px; display: grid; gap: 14px; }
   .dossier { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
-  .portrait { box-shadow: 0 0 0 3px var(--ink); padding: 4px 8px; background-image: var(--biome-tile); background-size: 48px 48px; }
-  .dossier h3 { font-family: var(--f-label); font-weight: 400; font-size: 16px; margin: 0 0 8px; word-break: break-word; }
-  .dossier dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 16px; }
-  .dossier dt { font-family: var(--f-label); font-size: 11px; color: var(--muted); padding-top: 3px; } .dossier dd { margin: 0; }
-  .paper { background: var(--parch); color: var(--ink); padding: 14px 16px; box-shadow: 0 0 0 3px var(--ink); line-height: 1.45; }
-  .paper .lbl { color: #7a5a24; display: block; margin-bottom: 6px; }
-  .paper p { margin: 0 0 .6em; max-width: 68ch; } .paper p:last-child { margin-bottom: 0; }
-  .paper code { font-family: var(--f-label); font-size: 13px; background: rgba(18,15,34,.08); padding: 0 4px; }
+  .portrait { border-radius: 4px; box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--frame); padding: 6px 14px 0; background: var(--portrait-bg); }
+  .dossier h3 { font-size: 20px; font-weight: 700; margin: 0 0 6px; word-break: break-word; }
+  .dossier dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 15px; align-items: center; }
+  .dossier dt { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; color: var(--muted); } .dossier dd { margin: 0; }
+  .paper {
+    background: linear-gradient(180deg, #f6ebcd, var(--parch)); color: var(--parch-ink); padding: 14px 18px; border-radius: 3px;
+    box-shadow: 0 0 0 2px #8a6a3a, 0 0 0 4px var(--ink); line-height: 1.5; font-size: 16px;
+  }
+  .paper .lbl { color: #8a6a3a; display: block; margin-bottom: 6px; }
+  .paper p { margin: 0 0 .6em; max-width: 70ch; } .paper p:last-child { margin-bottom: 0; }
+  .paper code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; background: rgba(42,32,22,.08); padding: 0 4px; border-radius: 2px; }
   .paper.casting p:last-child::after { content: "▌"; animation: blink .8s steps(2) infinite; }
-  .xmit { max-height: 250px; overflow: auto; }
+  .xmit { max-height: 260px; overflow: auto; }
   .orders { display: grid; gap: 10px; }
   .orders textarea {
-    width: 100%; min-height: 84px; resize: vertical; background: var(--ink); color: var(--parch); border: 3px solid var(--frame);
-    font-family: var(--f-body); font-size: 17px; padding: 10px;
+    width: 100%; min-height: 84px; resize: vertical; background: var(--ink); color: var(--parch); border: 2px solid var(--frame); border-radius: 4px;
+    font: inherit; font-size: 16px; padding: 10px 12px;
   }
   .orders textarea:focus { outline: none; border-color: var(--gold); }
-  .via { font-size: 15px; color: var(--muted); }
+  .via { font-size: 14px; color: var(--muted); line-height: 1.4; }
   .via b { color: var(--parch); font-weight: 600; }
   .btns { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-  .btn {
-    all: unset; cursor: pointer; font-family: var(--f-label); font-size: 12px; padding: 9px 12px; color: var(--ink); background: var(--gold);
-    box-shadow: 0 0 0 3px var(--ink), 4px 4px 0 3px var(--ink);
-  }
-  .btn:active { translate: 2px 2px; box-shadow: 0 0 0 3px var(--ink), 2px 2px 0 3px var(--ink); }
-  .btn:focus-visible { outline: 3px dashed var(--parch); outline-offset: 5px; }
-  .btn.alt { background: var(--parch); } .btn.deny { background: var(--counsel); color: var(--parch); }
-  .btn.ghost { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 2px var(--frame); }
-  .btns .hint { margin-left: auto; }
-  .req { font-family: var(--f-label); font-size: 13px; background: var(--ink); color: var(--gold); padding: 8px 10px; word-break: break-all; }
+  .btns .hint { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .req { font-family: ui-monospace, Menlo, monospace; font-size: 14px; background: var(--ink); color: var(--gold); padding: 9px 11px; border-radius: 4px; word-break: break-all; }
 
-  /* charter (realm editor) */
   .charter { padding: 16px; display: grid; gap: 16px; }
   .charter h3 { font-family: var(--f-display); font-weight: 400; font-size: 32px; margin: 0; line-height: 1; }
   .charter .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; }
-  .charter label.lbl, .charter .lbl { display: block; margin-bottom: 6px; }
-  .charter input[type=text] { width: 100%; background: var(--ink); color: var(--parch); border: 3px solid var(--frame); font-family: var(--f-label); font-size: 14px; padding: 8px; }
+  .charter .lbl { display: block; margin-bottom: 6px; }
+  .charter input[type=text] { width: 100%; background: var(--ink); color: var(--parch); border: 2px solid var(--frame); border-radius: 4px; font: inherit; font-size: 15px; padding: 8px; }
   .charter input[type=text]:focus { outline: none; border-color: var(--gold); }
   .choices { display: flex; flex-wrap: wrap; gap: 8px; }
-  .choice { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 2px; padding: 4px 6px; background: var(--ink); border: 2px solid var(--frame); font-family: var(--f-label); font-size: 10px; }
+  .choice { all: unset; box-sizing: border-box; cursor: pointer; display: grid; justify-items: center; gap: 2px; padding: 4px 6px 6px; background: var(--ink); border: 2px solid var(--frame); border-radius: 4px; font-size: 12px; }
   .choice[aria-pressed="true"], .choice:focus-visible { border-color: var(--gold); outline: none; }
-  .sw { all: unset; cursor: pointer; width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--ink); }
-  .sw[aria-pressed="true"], .sw:focus-visible { box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--gold); outline: none; }
-  .landlist { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 4px; font-family: var(--f-label); font-size: 12px; }
-  .landlist li { background: var(--ink); padding: 5px 8px; }
-  .charter select { background: var(--ink); color: var(--parch); border: 3px solid var(--frame); font-family: var(--f-label); font-size: 12px; padding: 6px; max-width: 100%; }
+  .sw { all: unset; box-sizing: border-box; cursor: pointer; width: 26px; height: 26px; border-radius: 3px; box-shadow: 0 0 0 2px var(--ink); }
+  .sw[aria-pressed="true"], .sw:focus-visible { box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--gold); outline: none; }
+  .landlist { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 4px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  .landlist li { background: var(--ink); padding: 5px 8px; border-radius: 3px; }
+  .charter select { background: var(--ink); color: var(--parch); border: 2px solid var(--frame); border-radius: 4px; font: inherit; font-size: 14px; padding: 6px; max-width: 100%; }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; z-index: 9; max-width: calc(100% - 32px);
-    font-family: var(--f-label); font-size: 12px; padding: 12px 14px; background: var(--parch); color: var(--ink);
-    box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--gold), 0 0 0 9px var(--ink);
+    font-size: 14px; font-weight: 600; padding: 11px 16px; border-radius: 4px; background: var(--parch); color: var(--parch-ink);
+    box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--gold), 0 8px 20px rgba(0,0,0,.4);
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 
-<div class="wrap">
-  <header class="top">
-    <div class="logo">
-      <canvas id="logoSprite" width="63" height="69" aria-hidden="true"></canvas>
-      <div><h1>Arcanum</h1><small class="lbl">your claude sessions · localhost</small></div>
+<div class="app">
+  <aside class="side" aria-label="Sidebar">
+    <div class="brand">
+      <canvas id="logoSprite" aria-hidden="true"></canvas>
+      <div><h1>Arcanum</h1><p id="sumline"></p></div>
     </div>
-    <div class="stats" id="stats"></div>
     <span class="sample">SAMPLE DATA · PROTOTYPE</span>
-  </header>
 
-  <section class="ravens px" aria-label="Ravens">
-    <h2 class="lbl"><span class="c-counsel">✉</span>Ravens · newest first</h2>
-    <ul class="feed" id="feed"></ul>
-  </section>
+    <nav class="nav" aria-label="Main">
+      <button id="navMap" aria-current="page"><span class="ico">◈</span>World map<span></span></button>
+      <button id="navScry"><span class="ico">⌕</span>Scry for a mage<kbd>⌘K</kbd></button>
+      <div class="scry" id="scryBox" hidden><input id="scry" type="text" placeholder="Name, realm or topic…" aria-label="Search mages"><div class="results" id="results"></div></div>
+      <button aria-disabled="true" title="Coming in M5"><span class="ico">✧</span>Summon a mage<span class="soon">LATER</span></button>
+      <button aria-disabled="true" title="Coming in M5"><span class="ico">⌂</span>Archive of the departed<span class="soon">LATER</span></button>
+      <button aria-disabled="true" title="Settings: sound, hooks, theme"><span class="ico">❖</span>Grimoire<span class="soon">LATER</span></button>
+    </nav>
 
-  <main id="view"></main>
+    <section class="await" aria-label="Waiting on you">
+      <span class="lbl">Waiting on you</span>
+      <div class="row2" id="awaitRow"></div>
+    </section>
+
+    <section class="ravens" aria-label="Ravens">
+      <div class="ravens-h"><span class="lbl">Ravens · newest first</span>
+        <div class="tabs" role="group" aria-label="Filter ravens"><button data-filter="all" aria-pressed="true">All</button><button data-filter="you" aria-pressed="false">Needs you</button></div></div>
+      <ul class="feed" id="feed"></ul>
+    </section>
+  </aside>
+
+  <main class="stage" id="view"></main>
 </div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
 /* ===================== sample data (illustrative, modelled on your real repos) ===================== */
 const NOW = Date.now(); const m = n => NOW - n * 60000;
-const BANNERS = ["#e8486b", "#6fe3ff", "#f2c14e", "#b884f0", "#7fd18a", "#ff9a3c", "#efe3c2"];
+const BANNERS = ["#ef5470", "#74e0f7", "#f2c14e", "#b884f0", "#7fd18a", "#ff9a3c", "#f0e4c4"];
 const LANDMARKS = {
-  castle:  { label: "Castle",  biome: "meadow" },
-  tower:   { label: "Tower",   biome: "highland" },
-  grove:   { label: "Grove",   biome: "forest" },
-  cavern:  { label: "Cavern",  biome: "crystal" },
-  volcano: { label: "Volcano", biome: "ash" },
-  pyramid: { label: "Pyramid", biome: "desert" },
-  spire:   { label: "Spire",   biome: "snow" },
-  village: { label: "Village", biome: "meadow" },
+  castle: { label: "Castle", biome: "meadow" }, tower: { label: "Tower", biome: "highland" }, grove: { label: "Grove", biome: "forest" },
+  cavern: { label: "Cavern", biome: "crystal" }, volcano: { label: "Volcano", biome: "ash" }, pyramid: { label: "Pyramid", biome: "desert" },
+  spire: { label: "Spire", biome: "snow" }, village: { label: "Village", biome: "meadow" },
 };
 const DEFAULT_REALMS = [
-  { id: "agent-rails", name: "Agent Rails", landmark: "castle", banner: "#e8486b", pos: { x: 22, y: 30 }, lands: ["~/projects/agent-rails", "~/projects/agent-rails/.claude/worktrees/*"] },
-  { id: "genui-module", name: "GenUI Module", landmark: "cavern", banner: "#6fe3ff", pos: { x: 49, y: 22 }, lands: ["~/projects/genui-module"] },
-  { id: "orchestration", name: "Orchestration", landmark: "tower", banner: "#f2c14e", pos: { x: 77, y: 28 }, lands: ["~/projects/orchestration (no repo)", "~/projects/orchestration/orchestrator"] },
-  { id: "lmax", name: "LMAX", landmark: "spire", banner: "#b884f0", pos: { x: 80, y: 72 }, lands: ["~/projects/lmax-frontend-tools", "~/projects/lmax-corp-nextjs"] },
-  { id: "inbox-pa", name: "Inbox PA", landmark: "village", banner: "#efe3c2", pos: { x: 30, y: 72 }, lands: ["~/projects/inbox-pa"] },
+  { id: "agent-rails", name: "Agent Rails", landmark: "castle", banner: "#ef5470", pos: { x: 22, y: 32 }, lands: ["~/projects/agent-rails", "~/projects/agent-rails/.claude/worktrees/*"] },
+  { id: "genui-module", name: "GenUI Module", landmark: "cavern", banner: "#74e0f7", pos: { x: 49, y: 24 }, lands: ["~/projects/genui-module"] },
+  { id: "orchestration", name: "Orchestration", landmark: "tower", banner: "#f2c14e", pos: { x: 77, y: 30 }, lands: ["~/projects/orchestration (no repo)", "~/projects/orchestration/orchestrator"] },
+  { id: "lmax", name: "LMAX", landmark: "spire", banner: "#b884f0", pos: { x: 79, y: 72 }, lands: ["~/projects/lmax-frontend-tools", "~/projects/lmax-corp-nextjs"] },
+  { id: "inbox-pa", name: "Inbox PA", landmark: "village", banner: "#f0e4c4", pos: { x: 31, y: 73 }, lands: ["~/projects/inbox-pa"] },
   { id: "genui-examples", name: "GenUI Examples", landmark: "grove", banner: "#7fd18a", pos: { x: 55, y: 60 }, lands: ["~/projects/genui-examples"] },
-  { id: "prism", name: "Prism", landmark: "volcano", banner: "#ff9a3c", pos: { x: 9, y: 58 }, lands: ["~/projects/prism"], undiscovered: true },
+  { id: "prism", name: "Prism", landmark: "volcano", banner: "#ff9a3c", pos: { x: 9, y: 60 }, lands: ["~/projects/prism"], undiscovered: true },
 ];
-/* state: counsel = wants a reply, seal = wants permission, cast = working, rest = idle/done */
 const SESSIONS = [
   { id: "s1", realm: "agent-rails", callsign: "agent-rails-e4", model: "opus", state: "counsel", since: m(3), host: "cmux", where: "cmux · agent-rails / pane 2",
     brief: "The parent_synced_at migration is written and the tests pass. It needs your call on how to backfill existing rows.",
@@ -258,270 +328,427 @@ const SESSIONS = [
     xmit: ["Before I scaffold: should tokens use <code>color.brand.primary</code> or <code>brand-primary</code>?"] },
 ];
 const RANK = {
-  haiku:  { title: "Apprentice", model: "Haiku 4.5" },
-  sonnet: { title: "Magician",   model: "Sonnet 5" },
-  opus:   { title: "Sorcerer",   model: "Opus 5.5" },
-  fable:  { title: "Archmage",   model: "Fable 5.1" },
+  haiku: { title: "Apprentice", model: "Haiku 4.5" }, sonnet: { title: "Magician", model: "Sonnet 5" },
+  opus: { title: "Sorcerer", model: "Opus 5.5" }, fable: { title: "Archmage", model: "Fable 5.1" },
 };
 const STATE = {
-  counsel: { label: "Seeks counsel", chip: "COUNSEL", cls: "counsel", glyph: "!", feed: "!" },
-  seal:    { label: "Awaits your seal", chip: "SEAL?",  cls: "seal",    glyph: "?", feed: "?" },
-  cast:    { label: "Casting",         chip: "CASTING", cls: "cast",    glyph: "✦", feed: "✦" },
-  rest:    { label: "Meditating",      chip: "RESTING", cls: "rest",    glyph: "z", feed: "·" },
+  counsel: { label: "Seeks counsel", chip: "COUNSEL", cls: "counsel", glyph: "!", verb: "seeks counsel" },
+  seal: { label: "Awaits your seal", chip: "SEAL?", cls: "seal", glyph: "?", verb: "awaits your seal" },
+  cast: { label: "Casting", chip: "CASTING", cls: "cast", glyph: "✦", verb: "is casting" },
+  rest: { label: "Meditating", chip: "RESTING", cls: "rest", glyph: "z", verb: "is meditating" },
 };
 const needsYou = s => s.state === "counsel" || s.state === "seal";
 
-/* realm customisation persists per viewer (prototype convenience only) */
 let REALMS = structuredClone(DEFAULT_REALMS);
-try { const saved = JSON.parse(localStorage.getItem("arcanum.realms") || "null"); if (saved) REALMS = saved; } catch (e) {}
-function saveRealms() { try { localStorage.setItem("arcanum.realms", JSON.stringify(REALMS)); } catch (e) {} }
+try { const saved = JSON.parse(localStorage.getItem("arcanum.realms.v2") || "null"); if (saved) REALMS = saved; } catch (e) {}
+function saveRealms() { try { localStorage.setItem("arcanum.realms.v2", JSON.stringify(REALMS)); } catch (e) {} }
 const visibleRealms = () => REALMS.filter(r => !r.undiscovered);
 const realmOf = id => REALMS.find(r => r.id === id);
 const troopsOf = id => SESSIONS.filter(s => s.realm === id && !s.hidden);
+const live = () => SESSIONS.filter(s => !s.hidden);
+const seen = new Map();   // session id → `since` value last viewed
+const isUnread = s => needsYou(s) && seen.get(s.id) !== s.since;
 
-/* ===================== pixel art ===================== */
-const INK = "#120f22", SKIN = "#f1c27d", GOLD = "#f2c14e", WOOD = "#6b4a2b";
-const ROBES = {
-  haiku:  { robe: "#8a7a5c", shade: "#675a42", hat: null,      gem: "#ffe9a8" },
-  sonnet: { robe: "#3b5bdb", shade: "#2a43a8", hat: "#3b5bdb", gem: "#6fe3ff", band: GOLD },
-  opus:   { robe: "#6b3fa0", shade: "#4c2a78", hat: "#6b3fa0", gem: "#ff7be5", stars: true, trim: GOLD },
-  fable:  { robe: "#e8e4f0", shade: "#b4abc9", hat: "#e8e4f0", gem: "#7ff0ff", beard: true, trim: "#7ff0ff" },
-};
-function mageRects(model, state, f) {
-  const r = ROBES[model], out = [], R = (x, y, w, h, c) => out.push([x, y, w, h, c]);
-  const rest = state === "rest";
-  const dy = rest ? 2 : (state === "cast" ? 0 : f % 2);
-  // robe (trapezoid) + hem
-  R(6, 8 + dy, 5, 1, r.robe); R(5, 9 + dy, 7, 2, r.robe); R(4, 11 + dy, 9, 3, r.robe); R(3, 14 + dy, 11, 4 - (rest ? 1 : 0), r.robe);
-  R(3, 17 + dy - (rest ? 1 : 0), 11, 1, r.shade);
-  if (r.trim) R(8, 9 + dy, 1, 8 - (rest ? 1 : 0), r.trim);
-  R(5, 12 + dy, 7, 1, r.shade);
-  if (!rest) { R(5, 18, 2, 1, INK); R(10, 18, 2, 1, INK); }
-  // left sleeve / hand (holds a sealed scroll when asking for permission)
-  if (state === "seal") { R(1, 10 + dy, 4, 2, r.shade); R(0, 9 + dy, 3, 4, "#efe3c2"); R(1, 11 + dy, 1, 1, "#c0392b"); }
-  else { R(3, 10 + dy, 2, 3, r.shade); R(3, 13 + dy, 2, 1, SKIN); }
-  // staff (apprentice gets a wand)
-  const raise = state === "counsel" ? (f % 2 ? 3 : 1) : 0;
-  if (model === "haiku") {
-    R(12, 10 + dy, 2, 2, r.shade); R(14, 7 + dy - raise, 1, 5, WOOD);
-    R(14, 6 + dy - raise, 1, 1, state === "cast" && f % 2 ? "#fff" : r.gem);
-  } else {
-    R(12, 10 + dy, 2, 2, r.shade); R(14, 4 + dy - raise, 1, 15 - (rest ? 3 : 0), WOOD);
-    R(13, 2 + dy - raise, 3, 2, state === "cast" && f % 2 ? "#ffffff" : r.gem);
-    if (model === "fable") { R(13, 1 + dy - raise, 1, 1, WOOD); R(15, 1 + dy - raise, 1, 1, WOOD); }
-  }
-  if (state === "cast") {                                    // sparkles that move each frame
-    const sp = [[16, 0], [12, 1], [17, 4], [11, 3], [16, 6]];
-    for (let i = 0; i < 2; i++) { const [x, y] = sp[(f + i * 2) % sp.length]; R(x, y + dy, 1, 1, r.gem); }
-  }
-  // face
-  R(6, 5 + dy, 5, 3, SKIN);
-  if (rest) { R(7, 6 + dy, 1, 1, "#7a5a40"); R(9, 6 + dy, 1, 1, "#7a5a40"); }
-  else { R(7, 6 + dy, 1, 1, INK); R(9, 6 + dy, 1, 1, INK); }
-  if (r.beard) { R(6, 7 + dy, 5, 3, "#f4f4f8"); R(7, 10 + dy, 3, 1, "#f4f4f8"); R(8, 11 + dy, 1, 1, "#f4f4f8"); }
-  else if (state === "counsel" && f % 2) R(8, 7 + dy, 1, 1, "#8a3b2a");
-  // headwear
-  if (!r.hat) { R(6, 3 + dy, 5, 1, r.robe); R(5, 4 + dy, 7, 1, r.robe); R(5, 5 + dy, 1, 3, r.robe); R(11, 5 + dy, 1, 3, r.robe); }
-  else {
-    const tip = model === "fable" ? -1 : 0;
-    R(10, 0 + dy + tip, 1, 1, r.hat); R(9, 1 + dy + tip, 2, 1, r.hat); R(8, 2 + dy, 3, 1, r.hat); R(7, 3 + dy, 4, 1, r.hat); R(4, 4 + dy, 9, 1, r.hat);
-    if (model === "fable") R(11, -1 + dy + tip, 1, 1, r.hat);
-    if (r.band) R(7, 3 + dy, 4, 1, r.band);
-    if (r.stars) { R(9, 2 + dy, 1, 1, GOLD); R(7, 3 + dy, 1, 1, GOLD); }
-  }
-  return out;
-}
-function paint(canvas, rects, scale) {
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false; ctx.setTransform(scale, 0, 0, scale, scale, scale * 2);
-  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(2, 19, 14, 1);
-  ctx.fillStyle = INK;                                               // 1px outline: silhouette at 4 offsets
-  for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) for (const [x, y, w, h] of rects) ctx.fillRect(x + ox, y + oy, w, h);
-  for (const [x, y, w, h, c] of rects) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
-}
-const sprites = new Set();
-function makeMage(s, scale) {
-  const c = document.createElement("canvas"); c.width = 20 * scale; c.height = 23 * scale;
-  c.setAttribute("role", "img"); c.setAttribute("aria-label", `${RANK[s.model].title} ${s.callsign}: ${STATE[s.state].label}`);
-  sprites.add({ c, s, scale }); paint(c, mageRects(s.model, s.state, 0), scale); return c;
-}
-
-function landmarkRects(kind, banner) {
-  const out = [], R = (x, y, w, h, c) => out.push([x, y, w, h, c]);
-  const STONE = "#9a96a8", STONE_D = "#6e6a80";
-  if (kind === "castle") { R(2, 7, 12, 7, STONE); R(2, 5, 2, 2, STONE); R(6, 5, 2, 2, STONE); R(10, 5, 2, 2, STONE); R(12, 5, 2, 2, STONE); R(6, 10, 4, 4, INK); R(4, 2, 1, 4, INK); R(5, 2, 3, 2, banner); R(2, 13, 12, 1, STONE_D); }
-  if (kind === "tower") { R(5, 4, 6, 10, STONE); R(4, 3, 8, 1, STONE_D); R(6, 1, 4, 2, banner); R(7, 0, 2, 1, banner); R(7, 6, 2, 2, "#f2c14e"); R(7, 11, 2, 3, INK); }
-  if (kind === "grove") { R(1, 6, 6, 6, "#2f7a3a"); R(9, 5, 6, 7, "#2f7a3a"); R(4, 3, 8, 6, "#3f9a4a"); R(7, 9, 2, 5, WOOD); R(2, 12, 2, 2, WOOD); R(12, 12, 2, 2, WOOD); R(6, 4, 1, 1, banner); R(10, 6, 1, 1, banner); }
-  if (kind === "cavern") { R(1, 7, 14, 7, "#5b4e7a"); R(3, 5, 10, 2, "#5b4e7a"); R(5, 4, 6, 1, "#5b4e7a"); R(6, 9, 4, 5, INK); R(2, 5, 1, 3, "#7ff0ff"); R(13, 6, 1, 3, "#ff7be5"); R(11, 3, 1, 2, banner); }
-  if (kind === "volcano") { R(1, 10, 14, 4, "#4a3a3a"); R(3, 7, 10, 3, "#5a4444"); R(5, 4, 6, 3, "#6a5050"); R(6, 3, 4, 1, "#ff6a2a"); R(7, 4, 1, 3, "#ff6a2a"); R(6, 0, 2, 2, "#8a8a99"); R(9, 1, 2, 1, "#8a8a99"); R(12, 11, 1, 1, banner); }
-  if (kind === "pyramid") { for (let i = 0; i < 7; i++) R(7 - i, 7 + i, 2 + i * 2, 1, i % 2 ? "#d4b06a" : "#e6c47c"); R(7, 7, 2, 1, banner); R(7, 11, 2, 3, INK); }
-  if (kind === "spire") { R(7, 0, 2, 3, "#d8f4ff"); R(6, 3, 4, 4, "#bfe8fb"); R(5, 7, 6, 7, "#a6dbf3"); R(3, 10, 2, 4, "#bfe8fb"); R(11, 9, 2, 5, "#bfe8fb"); R(7, 4, 1, 6, "#ffffff"); R(7, 11, 2, 3, banner); }
-  if (kind === "village") { R(1, 8, 6, 6, "#c9a27a"); R(0, 6, 8, 2, banner); R(2, 5, 4, 1, banner); R(3, 11, 2, 3, INK); R(9, 9, 6, 5, "#c9a27a"); R(8, 7, 8, 2, banner); R(10, 6, 4, 1, banner); R(11, 11, 2, 3, INK); }
-  return out;
-}
-function makeLandmark(kind, banner, scale) {
-  const c = document.createElement("canvas"); c.width = 18 * scale; c.height = 17 * scale; c.setAttribute("aria-hidden", "true");
-  const ctx = c.getContext("2d"); ctx.imageSmoothingEnabled = false; ctx.setTransform(scale, 0, 0, scale, scale, scale);
-  const rects = landmarkRects(kind, banner);
-  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(1, 14, 15, 1);
-  ctx.fillStyle = INK; for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) for (const [x, y, w, h] of rects) ctx.fillRect(x + ox, y + oy, w, h);
-  for (const [x, y, w, h, col] of rects) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
-  return c;
-}
-
-/* ---- terrain: land grows around each realm; biome = nearest realm (Voronoi), so realms are regions ---- */
-const BIOME = {
-  meadow:   ["#6fb24a", "#5ea13e", "#82c25a"],
-  forest:   ["#2f7a3a", "#25632f", "#3f8f45"],
-  highland: ["#8a8f5a", "#757a4a", "#9aa06a"],
-  crystal:  ["#6a5a9a", "#58488a", "#7ff0ff"],
-  ash:      ["#4a3a3a", "#3a2c2c", "#ff6a2a"],
-  desert:   ["#e0c07a", "#d4b06a", "#ecd08e"],
-  snow:     ["#e8eef5", "#cfd9e6", "#ffffff"],
-};
-function hash(x, y) { let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+/* ===================== colour + noise helpers ===================== */
+const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const css = a => `rgb(${a[0] | 0},${a[1] | 0},${a[2] | 0})`;
+const shade = (h, t) => css(mix(hex(h), [0, 0, 0], t));
+const tint = (h, t) => css(mix(hex(h), [255, 255, 255], t));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => v / 16 - .5);
+function dramp(ramp, t, x, y, k = 1) { const n = ramp.length - 1; return ramp[clamp(Math.round(clamp(t, 0, 1) * n + BAYER[(y & 3) * 4 + (x & 3)] * k), 0, n)]; }
+function hash(x, y) { let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function noise(x, y, s) {
-  const xi = Math.floor(x / s), yi = Math.floor(y / s), fx = x / s - xi, fy = y / s - yi;
-  const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+  const xi = Math.floor(x / s), yi = Math.floor(y / s), fx = x / s - xi, fy = y / s - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
   const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
-const TW = 96, TH = 60;
-function renderTerrain() {
-  const c = document.createElement("canvas"); c.width = TW; c.height = TH; c.className = "terrain";
-  c.setAttribute("role", "img"); c.setAttribute("aria-label", "World map of your realms");
-  const ctx = c.getContext("2d");
-  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
-    let best = null, bd = 1e9, land = 0;
-    for (const r of REALMS) {
-      const dx = x - r.pos.x / 100 * TW, dy = (y - r.pos.y / 100 * TH) * 1.25, d = Math.hypot(dx, dy);
-      land = Math.max(land, Math.exp(-((d / 11) ** 2)));
-      if (d < bd) { bd = d; best = r; }
-    }
-    land += (noise(x, y, 6) - .5) * .55 + (noise(x + 99, y, 2) - .5) * .25;
-    const n = hash(x, y);
-    let col;
-    if (land < .3) col = n < .04 ? "#2a4c86" : "#1d3b6e";
-    else if (land < .42) col = n < .1 ? "#3d6fb0" : "#2f5fa0";
-    else if (land < .47) col = "#e6d28f";
-    else if (best.undiscovered) col = n < .5 ? "#3a3550" : (n < .8 ? "#46405f" : "#524b6e");
-    else { const pal = BIOME[LANDMARKS[best.landmark].biome]; col = n < .62 ? pal[0] : (n < .92 ? pal[1] : pal[2]); }
-    ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1);
-  }
-  return c;
+const fbm = (x, y) => noise(x, y, 26) * .5 + noise(x + 17, y, 13) * .26 + noise(x, y + 31, 6) * .16 + noise(x + 5, y + 9, 3) * .08;
+const off = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+const lg = (c, x0, y0, x1, y1, stops) => { const g = c.createLinearGradient(x0, y0, x1, y1); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); return g; };
+const rg = (c, x, y, r0, r1, stops) => { const g = c.createRadialGradient(x, y, r0, x, y, r1); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); return g; };
+const poly = (c, pts) => { c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); c.closePath(); };
+const ell = (c, x, y, rx, ry) => { c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); };
+function star(c, x, y, s, col) { c.fillStyle = col; c.fillRect(x - s, y - .5, s * 2, 1); c.fillRect(x - .5, y - s, 1, s * 2); }
+
+/* draw at native resolution, outline, then upscale with hard pixels: painted-VGA look */
+const INK = "#0f0c1e";
+function renderSprite(display, w, h, scale, draw) {
+  const o = off(w, h); draw(o.getContext("2d"));
+  const s = off(w + 2, h + 2), sc = s.getContext("2d");
+  for (const [dx, dy] of [[0, 1], [2, 1], [1, 0], [1, 2]]) sc.drawImage(o, dx, dy);
+  sc.globalCompositeOperation = "source-in"; sc.fillStyle = "rgba(15,12,30,.9)"; sc.fillRect(0, 0, w + 2, h + 2);
+  if (display.width !== (w + 2) * scale) { display.width = (w + 2) * scale; display.height = (h + 2) * scale; }
+  const ctx = display.getContext("2d"); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, display.width, display.height);
+  ctx.imageSmoothingEnabled = false; ctx.drawImage(s, 0, 0, (w + 2) * scale, (h + 2) * scale); ctx.drawImage(o, scale, scale, w * scale, h * scale);
 }
-function tile(pal) {
-  const c = document.createElement("canvas"); c.width = c.height = 16; const ctx = c.getContext("2d");
-  ctx.fillStyle = pal[0]; ctx.fillRect(0, 0, 16, 16);
-  for (let i = 0; i < 18; i++) { ctx.fillStyle = i % 6 === 0 ? pal[2] : pal[1]; ctx.fillRect(hash(i, 3) * 16 | 0, hash(i, 7) * 16 | 0, 1, (hash(i, 11) * 2 | 0) + 1); }
-  return `url(${c.toDataURL()})`;
+
+/* ===================== mages (38×54 native) ===================== */
+const SKIN = ["#fbe0b4", "#d9a06a"];
+const WOOD = "#7a5530", WOOD_HI = "#a8804e";
+const ROBES = {
+  haiku:  { light: "#bfae8a", robe: "#8f7d5a", shade: "#584a33", gem: "#ffe9a8" },
+  sonnet: { light: "#7d97f2", robe: "#3b5bdb", shade: "#20348a", gem: "#74e0f7", hat: true, band: "#f2c14e" },
+  opus:   { light: "#ad80de", robe: "#6b3fa0", shade: "#3c1f63", gem: "#ff7be5", hat: true, stars: true, trim: "#f2c14e" },
+  fable:  { light: "#ffffff", robe: "#dcd6ea", shade: "#968cb4", gem: "#7ff0ff", hat: true, beard: true, trim: "#7ff0ff" },
+};
+function drawMage(c, model, st, f) {
+  const r = ROBES[model], rest = st === "rest";
+  c.translate(1, 4);
+  c.fillStyle = "rgba(0,0,0,.34)"; ell(c, 18, 47, 11, 2.2); c.fill();
+  const bob = rest ? 2 : st === "cast" ? 0 : (f % 2);
+  c.translate(0, bob);
+  const top = st === "counsel" ? (f % 2 ? 0 : 3) : rest ? 9 : 6;
+  // robe
+  const hem = rest ? 44 : 46;
+  c.beginPath(); c.moveTo(13, 22); c.lineTo(23, 22); c.quadraticCurveTo(26, 32, 30, hem); c.quadraticCurveTo(18, hem + 3, 6, hem); c.quadraticCurveTo(10, 32, 13, 22); c.closePath();
+  c.fillStyle = lg(c, 6, 0, 30, 0, [r.light, r.robe, r.shade]); c.fill();
+  c.strokeStyle = r.shade; c.globalAlpha = .55; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(16, 27); c.quadraticCurveTo(14, 38, 13, hem); c.moveTo(22, 28); c.quadraticCurveTo(24, 38, 25, hem - 1); c.stroke(); c.globalAlpha = 1;
+  if (r.trim) { c.strokeStyle = r.trim; c.lineWidth = 1.3; c.beginPath(); c.moveTo(18, 23); c.lineTo(18, hem + 1); c.stroke(); c.beginPath(); c.moveTo(7, hem - .5); c.quadraticCurveTo(18, hem + 2.5, 29, hem - .5); c.stroke(); }
+  c.fillStyle = r.trim || r.shade; c.fillRect(11, 31, 14, 1.6);
+  // left arm
+  if (st === "seal") {
+    c.fillStyle = lg(c, 4, 0, 14, 0, [r.robe, r.shade]); poly(c, [[13, 23], [5, 29], [8, 33], [15, 28]]); c.fill();
+    c.fillStyle = "#f3e6c4"; c.fillRect(-1, 26, 7, 10); c.fillStyle = "#c9b48a"; c.fillRect(-1, 26, 7, 1.3); c.fillRect(-1, 34.7, 7, 1.3);
+    c.fillStyle = "#8a6a3a"; c.fillRect(0, 29, 5, .7); c.fillRect(0, 31, 4, .7);
+    c.fillStyle = "#c0392b"; ell(c, 2.5, 37, 1.8, 1.8); c.fill();
+    c.fillStyle = rg(c, 7, 31, 0, 2, SKIN); ell(c, 7, 31.5, 1.7, 1.7); c.fill();
+  } else if (!rest) {
+    c.fillStyle = lg(c, 9, 0, 15, 0, [r.light, r.shade]); poly(c, [[13, 23], [9.5, 36], [14, 37], [15.5, 26]]); c.fill();
+    c.fillStyle = rg(c, 11.5, 37.5, 0, 2, SKIN); ell(c, 11.8, 37.8, 1.8, 1.8); c.fill();
+  } else { c.fillStyle = r.shade; ell(c, 18, 32, 5.5, 2.2); c.fill(); c.fillStyle = SKIN[1]; ell(c, 18, 31.5, 2, 1.2); c.fill(); }
+  // hood (behind head)
+  if (!r.hat) { c.fillStyle = lg(c, 11, 0, 25, 0, [r.light, r.robe, r.shade]); ell(c, 18, 15.5, 7.2, 7.8); c.fill(); }
+  // head
+  c.fillStyle = rg(c, 16, 14, .5, 6, SKIN); ell(c, 18, 16, 5, 5.2); c.fill();
+  if (rest) { c.fillStyle = "#6a4630"; c.fillRect(15, 16.5, 2, .8); c.fillRect(19, 16.5, 2, .8); }
+  else { c.fillStyle = INK; c.fillRect(15.4, 15.2, 1.3, 1.7); c.fillRect(19.3, 15.2, 1.3, 1.7); }
+  c.fillStyle = "rgba(220,110,90,.35)"; ell(c, 14.8, 18.3, 1.2, .8); c.fill(); ell(c, 21.2, 18.3, 1.2, .8); c.fill();
+  if (r.beard) {
+    c.fillStyle = lg(c, 0, 17, 0, 34, ["#ffffff", "#cfcfe0"]);
+    c.beginPath(); c.moveTo(13, 17); c.quadraticCurveTo(12.5, 27, 18, 34); c.quadraticCurveTo(23.5, 27, 23, 17); c.quadraticCurveTo(18, 21.5, 13, 17); c.fill();
+    c.fillStyle = "#f2f2f8"; ell(c, 18, 19.2, 3.2, 1.1); c.fill();
+  } else if (st === "counsel" && f % 2) { c.fillStyle = "#7a2e22"; ell(c, 18, 19.4, 1, .8); c.fill(); }
+  // headwear
+  if (!r.hat) { c.strokeStyle = r.shade; c.lineWidth = 1.4; c.beginPath(); c.arc(18, 16, 6.3, Math.PI * 1.02, Math.PI * 1.98); c.stroke(); }
+  else {
+    c.fillStyle = r.shade; ell(c, 18, 11.4, 9.6, 2.3); c.fill();
+    c.beginPath(); c.moveTo(11, 11); c.quadraticCurveTo(15, 4, 20, 0); c.quadraticCurveTo(23, -2.5, 27, -1.5); c.quadraticCurveTo(23.5, 1.5, 22.5, 4.5); c.quadraticCurveTo(24, 8, 25, 11); c.closePath();
+    c.fillStyle = lg(c, 11, 0, 25, 0, [r.light, r.robe, r.shade]); c.fill();
+    if (r.band) { c.strokeStyle = r.band; c.lineWidth = 1.6; c.beginPath(); c.moveTo(11.5, 9.6); c.quadraticCurveTo(18, 11.2, 24.5, 9.6); c.stroke(); }
+    if (r.stars) { star(c, 15.5, 7, 1.3, "#f2c14e"); star(c, 20, 3, 1, "#f2c14e"); star(c, 21.5, 8, .9, "#f2c14e"); }
+    if (model === "fable") { c.strokeStyle = r.trim; c.lineWidth = 1; c.beginPath(); c.moveTo(11.5, 9.8); c.quadraticCurveTo(18, 11.3, 24.5, 9.8); c.stroke(); }
+  }
+  // staff + right arm
+  if (model === "haiku") {
+    c.fillStyle = lg(c, 21, 0, 28, 0, [r.robe, r.shade]); poly(c, [[22, 23], [27.5, 30.5], [25.5, 33], [21, 27.5]]); c.fill();
+    const tipY = st === "counsel" ? (f % 2 ? 19 : 22) : rest ? 30 : 24;
+    c.strokeStyle = WOOD; c.lineWidth = 1.3; c.beginPath(); c.moveTo(26.5, 32); c.lineTo(31, tipY); c.stroke();
+    c.fillStyle = rg(c, 26.5, 32, 0, 2, SKIN); ell(c, 26.6, 32, 1.8, 1.8); c.fill();
+    if (st === "cast") { c.globalCompositeOperation = "lighter"; c.fillStyle = rg(c, 31, tipY, 0, 6, ["rgba(255,233,168,.8)", "rgba(255,233,168,0)"]); ell(c, 31, tipY, 6, 6); c.fill(); c.globalCompositeOperation = "source-over"; }
+    star(c, 31, tipY, st === "cast" && f % 2 ? 2 : 1.2, st === "cast" ? "#ffffff" : r.gem);
+  } else {
+    const hy = st === "counsel" ? top + 15 : rest ? 33 : 28;
+    c.strokeStyle = WOOD; c.lineWidth = 2; c.beginPath(); c.moveTo(29, top); c.lineTo(29, 47); c.stroke();
+    c.strokeStyle = WOOD_HI; c.lineWidth = .7; c.beginPath(); c.moveTo(28.4, top + 1); c.lineTo(28.4, 46); c.stroke();
+    if (model === "fable") { c.strokeStyle = WOOD; c.lineWidth = 1.2; c.beginPath(); c.moveTo(29, top); c.lineTo(26.8, top - 3.5); c.moveTo(29, top); c.lineTo(31.2, top - 3.5); c.stroke(); }
+    c.fillStyle = lg(c, 21, 0, 29, 0, [r.robe, r.shade]); poly(c, [[22, 23], [28.5, hy - 1.5], [28.5, hy + 2], [21, 28.5]]); c.fill();
+    c.fillStyle = rg(c, 29, hy, 0, 2, SKIN); ell(c, 29, hy, 1.9, 1.9); c.fill();
+    const gy = top - 2;
+    if (st === "cast") {
+      c.globalCompositeOperation = "lighter";
+      c.fillStyle = rg(c, 29, gy, 0, 9, [r.gem + "cc", r.gem + "00"]); ell(c, 29, gy, 9, 9); c.fill();
+      c.globalCompositeOperation = "source-over";
+    }
+    c.fillStyle = rg(c, 28.2, gy - .8, .2, 2.8, ["#ffffff", r.gem, shade(r.gem, .35)]); ell(c, 29, gy, 2.5, 2.5); c.fill();
+    if (st === "cast") for (let i = 0; i < 3; i++) { const a = f * .9 + i * 2.1; star(c, 29 + Math.cos(a) * 6.5, gy + Math.sin(a) * 5, i ? 1 : 1.5, i % 2 ? "#ffffff" : r.gem); }
+  }
+}
+const sprites = new Set();
+function makeMage(s, scale) {
+  const c = off(1, 1); c.setAttribute("role", "img"); c.setAttribute("aria-label", `${RANK[s.model].title} ${s.callsign}: ${STATE[s.state].label}`);
+  const sp = { c, draw: fr => renderSprite(c, 38, 54, scale, ctx => drawMage(ctx, s.model, s.state, fr + (s.id.length % 2))) };
+  sprites.add(sp); sp.draw(frame); return c;
+}
+
+/* ===================== landmarks (32×30 native, vector-painted) ===================== */
+function drawLandmark(c, kind, banner, f) {
+  const B = banner, Bd = shade(banner, .38), Bl = tint(banner, .25);
+  c.fillStyle = "rgba(0,0,0,.33)"; ell(c, 16, 27.5, 14, 2.6); c.fill();
+  const stone = (x0, x1) => lg(c, x0, 0, x1, 0, ["#d6d2e0", "#a19db4", "#69657e"]);
+  const smoke = (x, y) => { for (let i = 0; i < 3; i++) { const p = ((f + i * 3) % 9) / 9; c.fillStyle = `rgba(200,200,215,${.55 * (1 - p)})`; ell(c, x + Math.sin(p * 5 + i) * 1.5, y - p * 9, 1.4 + p * 2.2, 1.2 + p * 1.8); c.fill(); } };
+  const glow = (x, y, r, col) => { c.globalCompositeOperation = "lighter"; c.fillStyle = rg(c, x, y, 0, r, [col, "rgba(0,0,0,0)"]); ell(c, x, y, r, r); c.fill(); c.globalCompositeOperation = "source-over"; };
+  if (kind === "castle") {
+    c.fillStyle = stone(6, 26); c.fillRect(6, 14, 20, 13);
+    for (let x = 6; x < 26; x += 4) { c.fillStyle = stone(6, 26); c.fillRect(x, 12, 2.5, 2.5); }
+    for (const tx of [3, 23]) { c.fillStyle = stone(tx, tx + 6); c.fillRect(tx, 9, 6, 18); c.fillStyle = lg(c, tx, 0, tx + 7, 0, [Bl, B, Bd]); poly(c, [[tx - .8, 9.5], [tx + 3, 1.5], [tx + 6.8, 9.5]]); c.fill(); c.fillStyle = "#ffd977"; c.fillRect(tx + 2.4, 13, 1.4, 2.2); }
+    c.fillStyle = INK; c.beginPath(); c.moveTo(13, 27); c.lineTo(13, 21.5); c.quadraticCurveTo(16, 17.5, 19, 21.5); c.lineTo(19, 27); c.fill();
+    c.strokeStyle = "#3a3348"; c.lineWidth = .8; c.beginPath(); c.moveTo(16, 4.5); c.lineTo(16, 12); c.stroke();
+    const w = [0, 1, 0, -1][f % 4]; c.fillStyle = B; poly(c, [[16, 4.5], [21.5 + w, 5.6], [16.3, 7.8]]); c.fill();
+    c.fillStyle = "rgba(255,255,255,.18)"; c.fillRect(6, 14, 1.2, 13);
+  }
+  if (kind === "tower") {
+    c.fillStyle = stone(9, 23); c.fillRect(9, 23, 14, 4.5); c.fillStyle = stone(11, 21); c.fillRect(11, 8, 10, 16);
+    c.strokeStyle = "rgba(60,55,80,.45)"; c.lineWidth = .6; for (let y = 11; y < 24; y += 3) { c.beginPath(); c.moveTo(11, y); c.lineTo(21, y); c.stroke(); }
+    c.fillStyle = lg(c, 9, 0, 23, 0, [Bl, B, Bd]); poly(c, [[8.5, 8.5], [16, -1], [23.5, 8.5]]); c.fill();
+    const lit = f % 4 !== 3; c.fillStyle = lit ? "#ffd977" : "#d4a640"; c.fillRect(15, 12, 2, 3.5); if (lit) glow(16, 13.8, 5, "rgba(255,210,110,.55)");
+    c.fillStyle = INK; c.beginPath(); c.moveTo(14.5, 27); c.lineTo(14.5, 22.5); c.quadraticCurveTo(16, 20.5, 17.5, 22.5); c.lineTo(17.5, 27); c.fill();
+    c.fillStyle = "#4f8a3e"; for (const [x, y] of [[11.5, 20], [12.2, 18], [20, 22], [19.6, 16]]) { ell(c, x, y, 1, .9); c.fill(); }
+  }
+  if (kind === "grove") {
+    c.fillStyle = WOOD; c.fillRect(8, 17, 2, 9); c.fillRect(22, 16, 2, 10); c.fillRect(15, 13, 2, 12);
+    for (const [x, y, r] of [[9, 14, 7], [23, 13, 7], [16, 9, 8.5]]) { c.fillStyle = rg(c, x - r * .35, y - r * .4, 1, r * 1.1, ["#8fd06a", "#3d8a3e", "#18452a"]); ell(c, x, y, r, r * .85); c.fill(); }
+    c.fillStyle = stone(12, 20); c.fillRect(12.5, 22, 1.8, 5); c.fillRect(17.7, 22, 1.8, 5); c.fillRect(12, 21, 8, 1.6);
+    const p = .5 + .5 * Math.sin(f * .8); glow(16, 24.3, 4 + p * 2, B + "aa"); c.fillStyle = Bl; ell(c, 16, 24.3, 1.3, 1.3); c.fill();
+  }
+  if (kind === "cavern") {
+    c.beginPath(); c.moveTo(1, 27.5); c.quadraticCurveTo(4, 12, 12, 7); c.quadraticCurveTo(17, 3, 22, 7); c.quadraticCurveTo(29, 12, 31, 27.5); c.closePath();
+    c.fillStyle = lg(c, 0, 3, 28, 27, ["#a597d6", "#5b4b8e", "#261d46"]); c.fill();
+    c.fillStyle = INK; c.beginPath(); c.moveTo(10.5, 27.5); c.quadraticCurveTo(10.5, 18, 16, 17.5); c.quadraticCurveTo(21.5, 18, 21.5, 27.5); c.fill();
+    const cr = (x, y, h, col) => { c.fillStyle = lg(c, x - 2, 0, x + 2, 0, ["#ffffff", col, shade(col, .4)]); poly(c, [[x - 1.6, y], [x, y - h], [x + 1.6, y]]); c.fill(); };
+    cr(6, 24, 7, "#7ff0ff"); cr(8.3, 25, 4.5, "#ff7be5"); cr(25.5, 23, 8, "#7ff0ff"); cr(23.2, 24.5, 4.5, B); cr(17, 8.5, 5.5, B);
+    if (f % 4 === 0) star(c, 25.5, 16, 1.6, "#ffffff"); if (f % 4 === 2) star(c, 6, 18, 1.4, "#ffffff");
+  }
+  if (kind === "volcano") {
+    c.beginPath(); c.moveTo(0.5, 27.5); c.lineTo(11.5, 8); c.lineTo(20.5, 8); c.lineTo(31.5, 27.5); c.closePath();
+    c.fillStyle = lg(c, 4, 6, 28, 26, ["#9a7060", "#5a3d36", "#24181a"]); c.fill();
+    glow(16, 8, 7, "rgba(255,130,40,.6)"); c.fillStyle = "#ff8a2a"; ell(c, 16, 8, 4.2, 1.4); c.fill(); c.fillStyle = "#ffd36a"; ell(c, 16, 8, 2, .7); c.fill();
+    c.strokeStyle = "#ff7a2a"; c.lineWidth = 1.3; c.beginPath(); c.moveTo(15, 9); c.quadraticCurveTo(13.5, 14, 14.5, 17); c.quadraticCurveTo(15.5, 21, 12.5, 25); c.stroke();
+    smoke(17, 5); c.fillStyle = B; poly(c, [[25, 27.5], [27, 23.5], [29, 27.5]]); c.fill();
+  }
+  if (kind === "pyramid") {
+    c.fillStyle = lg(c, 2, 0, 16, 0, ["#f6e2ac", "#e3c789"]); poly(c, [[16, 3], [1.5, 27.5], [16, 27.5]]); c.fill();
+    c.fillStyle = lg(c, 16, 0, 30, 0, ["#c29d62", "#8e6c3c"]); poly(c, [[16, 3], [16, 27.5], [30.5, 27.5]]); c.fill();
+    c.strokeStyle = "rgba(90,60,30,.35)"; c.lineWidth = .6; for (let y = 8; y < 27; y += 3.2) { const hw = (y - 3) * .59; c.beginPath(); c.moveTo(16 - hw, y); c.lineTo(16 + hw, y); c.stroke(); }
+    c.fillStyle = lg(c, 13, 0, 19, 0, [Bl, B, Bd]); poly(c, [[16, 3], [13.6, 7.2], [18.4, 7.2]]); c.fill();
+    c.fillStyle = INK; c.fillRect(14.6, 22, 2.8, 5.5); if (f % 4 === 1) star(c, 16, 3.5, 1.6, "#ffffff");
+  }
+  if (kind === "spire") {
+    c.fillStyle = "#eef4fa"; ell(c, 16, 27, 13, 2.6); c.fill();
+    const shard = (pts, x0, x1) => { c.fillStyle = lg(c, x0, 0, x1, 0, ["#ffffff", "#bfe2f6", "#6f9cc6"]); poly(c, pts); c.fill(); };
+    shard([[8, 27.5], [9.5, 13], [13, 27.5]], 8, 13); shard([[24, 27.5], [22.5, 11], [19, 27.5]], 19, 24);
+    shard([[12.2, 27.5], [12.4, 9], [16, -0.5], [19.6, 9], [19.8, 27.5]], 12, 20);
+    c.fillStyle = "rgba(255,255,255,.85)"; c.fillRect(14.6, 4, .8, 18);
+    c.fillStyle = B; c.globalAlpha = .55; c.fillRect(13, 22, 6, 1.4); c.globalAlpha = 1;
+    if (f % 4 === 0) star(c, 16, 2, 1.8, "#ffffff"); if (f % 4 === 2) star(c, 22.5, 13, 1.4, "#ffffff");
+  }
+  if (kind === "village") {
+    const hut = (x0, x1, base, ry) => {
+      c.fillStyle = lg(c, x0, 0, x1, 0, ["#f0d2a6", "#c9a27a", "#8e6c4e"]); c.fillRect(x0, ry, x1 - x0, base - ry);
+      c.fillStyle = lg(c, x0, 0, x1, 0, [Bl, B, Bd]); poly(c, [[x0 - 1.2, ry + .5], [(x0 + x1) / 2, ry - 7], [x1 + 1.2, ry + .5]]); c.fill();
+      c.fillStyle = INK; c.fillRect((x0 + x1) / 2 - 1.2, base - 4.5, 2.4, 4.5);
+      c.fillStyle = "#ffd977"; c.fillRect(x0 + 1.6, ry + 2.5, 2, 2);
+    };
+    c.fillStyle = "#6a5a4a"; c.fillRect(10.5, 7, 1.8, 5); smoke(11.4, 6);
+    hut(3, 14, 27.5, 16); hut(18, 29, 27.5, 18);
+    c.strokeStyle = "#8e6c4e"; c.lineWidth = .7; c.beginPath(); c.moveTo(1, 26.5); c.lineTo(31, 26.5); c.stroke();
+    for (let x = 1; x < 32; x += 3) { c.beginPath(); c.moveTo(x, 25); c.lineTo(x, 27.5); c.stroke(); }
+  }
+}
+function makeLandmark(kind, banner, scale, geo = 1) {
+  const c = off(1, 1); c.setAttribute("aria-hidden", "true");
+  const sp = { c, draw: fr => renderSprite(c, 32 * geo, 30 * geo, scale, ctx => { ctx.scale(geo, geo); drawLandmark(ctx, kind, banner, fr); }) };
+  sprites.add(sp); sp.draw(frame); return c;
+}
+
+/* ===================== terrain: realms are regions; land grows around each one ===================== */
+const BIOME = {
+  meadow:   { ramp: ["#2e5e2a", "#3f7d32", "#5a9a3e", "#7db84f", "#a8d36a"], sky: ["#3d6fb0", "#f2c9a0"] },
+  forest:   { ramp: ["#122d1a", "#1c4226", "#285c31", "#3a7a3f", "#58984f"], sky: ["#1f3a4a", "#d8c27a"] },
+  highland: { ramp: ["#4a4632", "#666042", "#878156", "#a69e6c", "#c7be8c"], sky: ["#4a6a9a", "#e6dcc4"] },
+  crystal:  { ramp: ["#251d46", "#3b3066", "#54458a", "#7362a8", "#9c8bcf"], sky: ["#140f34", "#7a5aa8"] },
+  ash:      { ramp: ["#1e1516", "#342425", "#4c3530", "#68473e", "#87614e"], sky: ["#241010", "#c0582a"] },
+  desert:   { ramp: ["#9a7a44", "#b8935a", "#d1ad6e", "#e3c789", "#f2dfa8"], sky: ["#b8603a", "#f8deaa"] },
+  snow:     { ramp: ["#8292b0", "#a5b4cc", "#c6d2e3", "#e1e9f3", "#ffffff"], sky: ["#5e7aa2", "#eef3f8"] },
+};
+const SEA = ["#0d2246", "#14335f", "#1c4a7e", "#26649c", "#3584b6"].map(hex);
+const SAND = ["#b59a5e", "#d2b679", "#e9d59d"].map(hex);
+const FOAM = hex("#d8eef2"), FOG = ["#2c2840", "#3a3552", "#4a4566", "#5c567a"].map(hex);
+function buildTerrain(W, H) {
+  const img = new ImageData(W, H), d = img.data;
+  const R = REALMS.map(r => ({ r, x: r.pos.x / 100 * W, y: r.pos.y / 100 * H, ramp: BIOME[LANDMARKS[r.landmark].biome].ramp.map(hex), biome: LANDMARKS[r.landmark].biome }));
+  const rad = Math.min(W, H * 1.6) * .15;
+  const field = (x, y) => { let l = 0; for (const q of R) { const dx = x - q.x, dy = (y - q.y) * 1.2; l = Math.max(l, Math.exp(-(dx * dx + dy * dy) / (rad * rad))); } return l + (fbm(x, y) - .5) * .75; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const f = field(x, y); let c;
+    if (f < .40) {
+      c = dramp(SEA, 1 - clamp((.40 - f) / .34, 0, 1), x, y, 1.2);
+      if (f > .375 && BAYER[(y & 3) * 4 + (x & 3)] > -.1) c = mix(c, FOAM, .7);
+      else if (hash(x, y) < .004) c = mix(c, [255, 255, 255], .45);
+    } else if (f < .445) c = dramp(SAND, (f - .40) / .045, x, y);
+    else {
+      const wx = (noise(x + 300, y, 16) - .5) * rad * .5, wy = (noise(x, y + 300, 16) - .5) * rad * .5;
+      let d1 = 1e9, d2 = 1e9, b = R[0];
+      for (const q of R) { const dd = Math.hypot(x + wx - q.x, (y + wy - q.y) * 1.2); if (dd < d1) { d2 = d1; d1 = dd; b = q; } else if (dd < d2) d2 = dd; }
+      const light = clamp(.5 + (field(x - 1, y - 1) - f) * 10 + (noise(x, y, 4) - .5) * .35, 0, 1);
+      const elev = clamp((f - .445) * 1.6, 0, 1);
+      c = dramp(b.ramp, light * .7 + elev * .3, x, y);
+      if (b.biome === "forest" && noise(x + 7, y + 3, 2.5) > .58) c = mix(c, [8, 24, 12], .4);
+      if (b.biome === "meadow" && hash(x, y) < .006) c = [240, 222, 130];
+      if (b.biome === "crystal" && hash(x, y) < .009) c = [150, 240, 255];
+      if (b.biome === "ash" && Math.abs(noise(x, y, 8) - .5) < .012) c = [255, 120, 40];
+      if (b.biome === "highland" && hash(x, y) < .02) c = mix(c, [40, 36, 28], .5);
+      if (b.r.undiscovered) c = mix(c, dramp(FOG, noise(x, y, 7), x, y), .88);
+      if (d2 - d1 < 1.3) c = mix(c, [18, 14, 32], .38);
+    }
+    const vx = x / W - .5, vy = y / H - .5, v = clamp(1.08 - (vx * vx + vy * vy) * 1.1, .62, 1);
+    const i = (y * W + x) * 4; d[i] = c[0] * v; d[i + 1] = c[1] * v; d[i + 2] = c[2] * v; d[i + 3] = 255;
+  }
+  const cv = off(W, H); cv.getContext("2d").putImageData(img, 0, 0); return cv;
+}
+
+/* realm scene backdrop: sky, two hill layers, dithered ground (native height 100) */
+function buildBackdrop(W, H, biome) {
+  const B = BIOME[biome], ramp = B.ramp.map(hex), s0 = hex(B.sky[0]), s1 = hex(B.sky[1]);
+  const img = new ImageData(W, H), d = img.data, sky = [s0, mix(s0, s1, .33), mix(s0, s1, .66), s1];
+  for (let x = 0; x < W; x++) {
+    const far = H * .42 + (noise(x, 0, 30) - .5) * H * .28 + (noise(x, 5, 9) - .5) * H * .06;
+    const near = H * .6 + (noise(x + 90, 0, 18) - .5) * H * .16;
+    for (let y = 0; y < H; y++) {
+      let c;
+      if (y < far) c = dramp(sky, y / (H * .62), x, y, 1.1);
+      else if (y < near) c = mix(dramp(ramp.slice(1, 4), noise(x, y, 6), x, y), s1, .45);
+      else if (y < H * .7) c = dramp(ramp.slice(1, 4), .4 + (noise(x, y, 5) - .5) * .8, x, y);
+      else c = dramp(ramp, .85 - (y - H * .7) / (H * .3) * .55 + (noise(x, y, 4) - .5) * .4, x, y);
+      if (biome === "forest" && y >= near - 6 && y < near && noise(x, y, 2) > .45) c = ramp[0];
+      if ((biome === "crystal" || biome === "snow") && y < far && hash(x, y) < .004) c = [255, 255, 255];
+      const i = (y * W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+    }
+  }
+  const cv = off(W, H); cv.getContext("2d").putImageData(img, 0, 0); return cv;
 }
 
 /* ===================== rendering ===================== */
 const $ = s => document.querySelector(s), esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function ago(t) { const d = (Date.now() - t) / 60000; if (d < 1) return "now"; if (d < 60) return `${d | 0}m`; if (d < 1440) return `${(d / 60) | 0}h`; return `${(d / 1440) | 0}d`; }
-function clock(t) { const d = new Date(t); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; }
-const ui = { view: "map", realm: null, session: null, mapSel: 0, charter: false };
-const live = () => SESSIONS.filter(s => !s.hidden);
+const plain = h => h.replace(/<[^>]+>/g, "");
+const ui = { view: "map", realm: null, session: null, mapSel: 0, charter: false, filter: "all" };
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let frame = 0;
 
-function renderStats() {
+function renderSide() {
   const L = live(), n = k => L.filter(s => s.state === k).length;
-  $("#stats").innerHTML = `<span class="stat"><b>${visibleRealms().length}</b>REALMS</span><span class="stat"><b>${L.length}</b>MAGES</span>
-    <span class="stat counsel"><b>${n("counsel")}</b>SEEK COUNSEL</span><span class="stat seal"><b>${n("seal")}</b>AWAIT A SEAL</span><span class="stat cast"><b>${n("cast")}</b>CASTING</span>`;
+  $("#sumline").textContent = `${visibleRealms().length} realms · ${L.length} mages · ${n("cast")} casting`;
+  $("#awaitRow").innerHTML = `<span class="pill counsel">! ${n("counsel")} counsel</span><span class="pill seal">? ${n("seal")} seal</span>
+    <button class="next" id="nextBtn" title="Next waiting mage (N)">Next ▸</button>`;
+  $("#nextBtn").onclick = nextRequest;
+  $("#navMap").setAttribute("aria-current", ui.view === "map" ? "page" : "false");
+  const items = L.filter(s => ui.filter === "all" || needsYou(s)).sort((a, b) => b.since - a.since);
+  $("#feed").innerHTML = items.map(s => {
+    const r = realmOf(s.realm), st = STATE[s.state];
+    return `<li><button class="raven${isUnread(s) ? " unread" : ""}${s.state === "rest" ? " dim" : ""}" data-go="${s.id}">
+      <span class="dot" style="background:${r.banner}"></span>
+      <span class="who">${esc(s.callsign)} <small>· ${esc(r.name)}</small></span>
+      <span class="t"><span class="g ${st.cls}">${st.glyph}</span>${ago(s.since)}</span>
+      <span class="msg">${esc(s.brief)}</span></button></li>`;
+  }).join("") || `<li class="via" style="padding:8px">No ravens.</li>`;
 }
-function renderFeed() {
-  const items = live().filter(s => s.state !== "rest").sort((a, b) => b.since - a.since).slice(0, 5);
-  $("#feed").innerHTML = items.map(s => `<li><button data-go="${s.id}">
-      <span class="t">${clock(s.since)}</span><span class="k c-${STATE[s.state].cls}">${STATE[s.state].feed}</span>
-      <span class="who">${esc(realmOf(s.realm).name)}</span><span class="msg">${esc(s.callsign)}: ${esc(s.brief)}</span></button></li>`).join("");
-}
-function realmsOrdered() {   // time order: realms with someone waiting on you first, newest request first
+document.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => {
+  ui.filter = b.dataset.filter; document.querySelectorAll("[data-filter]").forEach(x => x.setAttribute("aria-pressed", x === b)); renderSide();
+});
+
+function realmsOrdered() {
   const t = (r, f) => Math.max(0, ...troopsOf(r.id).filter(f).map(s => s.since));
   return [...visibleRealms()].sort((a, b) => (t(b, needsYou) - t(a, needsYou)) || (t(b, () => true) - t(a, () => true)));
 }
+let mapScale = 3;
 function renderMap() {
-  sprites.clear(); ui.view = "map";
+  sprites.clear(); ui.view = "map"; renderSide();
+  const newest = live().filter(needsYou).sort((a, b) => b.since - a.since)[0];
   const canDiscover = REALMS.some(r => r.undiscovered);
-  $("#view").innerHTML = `<div class="map-h"><h2>The Known Realms</h2><div class="right">
-      <span class="hint"><kbd>←</kbd><kbd>→</kbd> select <kbd>⏎</kbd> fast travel <kbd>N</kbd> next request</span>
-      ${canDiscover ? `<button class="btn ghost" id="discover">Simulate a discovery</button>` : ""}</div></div>
-    <section class="px worldframe"><div class="world" id="world"></div>
-    <div class="legend"><span><span class="c-counsel">!</span> seeks counsel (wants a reply)</span><span><span class="c-seal">?</span> awaits your seal (permission)</span><span><span class="c-cast">✦</span> casting (working)</span><span>fog = undiscovered</span></div></section>`;
-  const w = $("#world"); w.appendChild(renderTerrain());
-  const order = realmsOrdered();
-  order.forEach((r, i) => {
-    const t = troopsOf(r.id), n = k => t.filter(s => s.state === k).length;
+  $("#view").innerHTML = `<div class="mapwrap" id="mapwrap"><div class="world" id="world"></div><div class="flash" id="flash"></div>
+    <div class="overlay title-scroll"><h2>The Known Realms</h2></div>
+    ${newest ? `<button class="overlay latest" data-go="${newest.id}"><span class="g counsel">✉</span><span class="txt"><b>${esc(newest.callsign)}</b> ${STATE[newest.state].verb} · ${esc(newest.brief)}</span><span class="g rest">${ago(newest.since)}</span></button>` : ""}
+    <div class="overlay tools">${canDiscover ? `<button class="btn ghost" id="discover">Simulate a discovery</button>` : ""}</div>
+    <div class="overlay legend"><span><span class="g counsel">!</span> seeks counsel</span><span><span class="g seal">?</span> awaits your seal</span><span><span class="g cast">✦</span> casting</span><span>fog: undiscovered</span></div>
+    <div class="overlay keys"><kbd>←</kbd><kbd>→</kbd> select · <kbd>⏎</kbd> fast travel · <kbd>N</kbd> next</div></div>`;
+  const d = $("#discover"); if (d) d.onclick = discover;
+  drawWorld();
+}
+function drawWorld() {
+  const w = $("#world"); if (!w) return;
+  const box = $("#mapwrap").getBoundingClientRect();
+  mapScale = box.width > 900 ? 3 : 2;
+  const W = Math.max(60, Math.round(box.width / mapScale)), H = Math.max(60, Math.round(box.height / mapScale));
+  w.querySelectorAll(".site, canvas.terrain").forEach(el => el.remove());
+  for (const sp of sprites) if (!sp.c.isConnected) sprites.delete(sp);
+  const t = buildTerrain(W, H); t.className = "terrain"; t.setAttribute("role", "img"); t.setAttribute("aria-label", "World map of your realms"); w.appendChild(t);
+  realmsOrdered().forEach((r, i) => {
+    const ts = troopsOf(r.id), n = k => ts.filter(s => s.state === k).length;
     const b = document.createElement("button"); b.className = "site" + (i === ui.mapSel ? " sel" : ""); b.dataset.realm = r.id;
     b.style.left = r.pos.x + "%"; b.style.top = r.pos.y + "%";
-    b.setAttribute("aria-label", `${r.name}: ${t.length} mages, ${t.filter(needsYou).length} waiting on you`);
-    b.appendChild(makeLandmark(r.landmark, r.banner, 3));
+    b.setAttribute("aria-label", `${r.name}: ${ts.length} mages, ${ts.filter(needsYou).length} waiting on you`);
+    b.appendChild(makeLandmark(r.landmark, r.banner, mapScale));
     const pins = [n("counsel") && `<i class="counsel">!${n("counsel")}</i>`, n("seal") && `<i class="seal">?${n("seal")}</i>`, n("cast") && `<i class="cast">✦${n("cast")}</i>`].filter(Boolean).join("");
     b.insertAdjacentHTML("beforeend", `<span class="tag">${r.fresh ? `<span class="new">NEW</span>` : ""}${esc(r.name)}<span class="pin">${pins}</span></span>`);
     b.onclick = () => travel(r.id); b.onfocus = () => { ui.mapSel = i; markMap(); };
     w.appendChild(b);
   });
-  const d = $("#discover"); if (d) d.onclick = discover;
 }
+let rt; new ResizeObserver(() => { if (ui.view !== "map") return; clearTimeout(rt); rt = setTimeout(drawWorld, 160); }).observe($("#view"));
 function markMap() { document.querySelectorAll(".site").forEach((el, i) => el.classList.toggle("sel", i === ui.mapSel)); }
 function discover() {
   const r = REALMS.find(x => x.undiscovered); if (!r) return;
   r.undiscovered = false; r.fresh = true; SESSIONS.filter(s => s.realm === r.id).forEach(s => { s.hidden = false; s.since = Date.now(); });
-  saveRealms(); toast(`NEW REALM DISCOVERED: ${r.name.toUpperCase()} (${r.lands[0]})`);
-  ui.mapSel = 0; renderStats(); renderFeed(); renderMap();
+  saveRealms(); toast(`New realm discovered: ${r.name} (${r.lands[0]})`); ui.mapSel = 0; renderMap();
 }
-const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function travel(rid, sid) {
   const r = realmOf(rid), w = $("#world");
-  const go = () => openRealm(rid, sid);
-  if (!w || still) return go();
-  w.style.transformOrigin = `${r.pos.x}% ${r.pos.y}%`; w.classList.add("zoom"); setTimeout(go, 500);
+  if (!w || still) return openRealm(rid, sid);
+  w.style.transformOrigin = `${r.pos.x}% ${r.pos.y}%`; w.classList.add("zoom"); $("#flash").classList.add("on");
+  setTimeout(() => openRealm(rid, sid), 560);
 }
 function openRealm(rid, sid) {
   const r = realmOf(rid); r.fresh = false;
   const t = troopsOf(rid).sort((a, b) => (needsYou(b) - needsYou(a)) || (b.since - a.since));
   ui.view = "realm"; ui.realm = rid; ui.session = sid || (t[0] && t[0].id); ui.charter = false; renderRealm(true);
+  $("#view").scrollTop = 0;
 }
 function renderRealm(entering) {
   sprites.clear();
-  const r = realmOf(ui.realm);
+  const r = realmOf(ui.realm), biome = LANDMARKS[r.landmark].biome, B = BIOME[biome];
   const t = troopsOf(ui.realm).sort((a, b) => (needsYou(b) - needsYou(a)) || (b.since - a.since));
-  document.documentElement.style.setProperty("--biome-tile", tile(BIOME[LANDMARKS[r.landmark].biome]));
-  $("#view").innerHTML = `<div class="${entering ? "realm-in" : ""}" style="display:grid;gap:12px">
-    <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${r.banner}">${esc(r.name)}</h2>
-      <span class="lands">${r.lands.length} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} mages</span>
-      <div class="right"><span class="hint"><kbd>↑</kbd><kbd>↓</kbd> mage <kbd>R</kbd> reply <kbd>esc</kbd> map</span>
+  const cur = SESSIONS.find(x => x.id === ui.session); if (cur) seen.set(cur.id, cur.since);
+  document.documentElement.style.setProperty("--portrait-bg", `linear-gradient(180deg, ${B.sky[0]}, ${B.sky[1]} 62%, ${B.ramp[3]} 62%, ${B.ramp[1]})`);
+  $("#view").innerHTML = `<div class="realm${entering ? " in" : ""}">
+    <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${tint(r.banner, .15)}">${esc(r.name)}</h2>
+      <span class="meta">${r.lands.length} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} mages</span>
+      <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>R</kbd> reply · <kbd>esc</kbd> map</span>
       <button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button></div></div>
-    ${ui.charter ? `<section class="px charter" id="charter"></section>` : ""}
-    <section class="px scene" id="scene" aria-label="Mages in ${esc(r.name)}"></section>
-    ${t.length ? `<div class="op"><section class="roster px" aria-label="Mages"><div class="lbl">Circle · ${t.length}</div><div id="roster"></div></section>
-      <section class="comms px" id="comms" aria-live="polite"></section></div>` : `<section class="px comms"><p>No mages in this realm right now.</p></section>`}</div>`;
+    ${ui.charter ? `<section class="card charter" id="charter"></section>` : ""}
+    <section class="scene" id="scene" aria-label="Mages in ${esc(r.name)}"><div class="troupe" id="troupe"></div></section>
+    ${t.length ? `<div class="op"><section class="card circle" aria-label="Mages"><span class="lbl">Circle · ${t.length}</span><div id="circle"></div></section>
+      <section class="card comms" id="comms" aria-live="polite"></section></div>` : `<section class="card comms"><p>No mages in this realm right now.</p></section>`}</div>`;
   $("#back").onclick = goMap;
   $("#editRealm").onclick = () => { ui.charter = !ui.charter; renderRealm(); };
-  const sc = $("#scene"); const lm = makeLandmark(r.landmark, r.banner, 7); lm.className = "landmark"; sc.appendChild(lm);
+  const sc = $("#scene"), bw = Math.round(sc.clientWidth / 3), bd = buildBackdrop(Math.max(40, bw), 100, biome);
+  bd.className = "backdrop"; bd.setAttribute("aria-hidden", "true"); sc.prepend(bd);
+  const lm = makeLandmark(r.landmark, r.banner, 3, 2); lm.className = "landmark"; sc.insertBefore(lm, $("#troupe"));
   t.forEach(s => {
     const b = document.createElement("button"); b.className = "mage" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
-    b.appendChild(makeMage(s, 4));
+    b.appendChild(makeMage(s, 3));
     b.insertAdjacentHTML("afterbegin", `<span class="bubble ${STATE[s.state].cls}">${STATE[s.state].glyph}</span>`);
     b.insertAdjacentHTML("beforeend", `<span class="name">${esc(s.callsign)}</span>`);
     b.onclick = () => { ui.session = s.id; renderRealm(); };
-    sc.appendChild(b);
+    $("#troupe").appendChild(b);
   });
-  const ro = $("#roster");
-  if (ro) t.forEach(s => {
-    const b = document.createElement("button"); b.className = "row" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
+  const ci = $("#circle");
+  if (ci) t.forEach(s => {
+    const b = document.createElement("button"); b.className = "crow" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
     b.innerHTML = `<span><span class="cs">${esc(s.callsign)}</span><span class="rk">${RANK[s.model].title} · ${ago(s.since)}</span></span><span class="chip ${STATE[s.state].cls}">${STATE[s.state].chip}</span>`;
     b.onclick = () => { ui.session = s.id; renderRealm(); };
-    ro.appendChild(b);
+    ci.appendChild(b);
   });
   if (ui.charter) renderCharter(r);
-  const s = SESSIONS.find(x => x.id === ui.session); if (s && $("#comms")) renderComms(s);
+  if (cur && $("#comms")) renderComms(cur);
+  renderSide();
 }
 function renderCharter(r) {
-  const others = visibleRealms().filter(x => x.id !== r.id);
-  const el = $("#charter");
+  const others = visibleRealms().filter(x => x.id !== r.id), el = $("#charter");
   el.innerHTML = `<h3>Realm charter</h3>
-    <p class="via" style="margin:0">New realms get a landmark and banner automatically when a repo is discovered. Change them here.</p>
+    <p class="via" style="margin:0">A new realm gets a landmark and banner automatically when its repo is discovered. Change them here.</p>
     <div class="grid">
       <div><label class="lbl" for="rname">Name</label><input type="text" id="rname" value="${esc(r.name)}"></div>
       <div><span class="lbl">Banner</span><div class="choices">${BANNERS.map(c => `<button class="sw" data-banner="${c}" style="background:${c}" aria-label="Banner ${c}" aria-pressed="${c === r.banner}"></button>`).join("")}</div></div>
@@ -530,24 +757,21 @@ function renderCharter(r) {
         <label class="lbl" for="merge">Absorb another realm</label>
         <select id="merge"><option value="">Choose a realm…</option>${others.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join("")}</select></div>
     </div>`;
-  const lc = $("#lmChoices");
   for (const [k, v] of Object.entries(LANDMARKS)) {
-    const b = document.createElement("button"); b.className = "choice"; b.dataset.lm = k; b.setAttribute("aria-pressed", k === r.landmark);
-    b.appendChild(makeLandmark(k, r.banner, 2)); b.insertAdjacentHTML("beforeend", `<span>${v.label}</span>`); lc.appendChild(b);
+    const b = document.createElement("button"); b.className = "choice"; b.setAttribute("aria-pressed", k === r.landmark);
+    b.appendChild(makeLandmark(k, r.banner, 2)); b.insertAdjacentHTML("beforeend", `<span>${v.label}</span>`); $("#lmChoices").appendChild(b);
     b.onclick = () => { r.landmark = k; saveRealms(); renderRealm(); };
   }
   el.querySelectorAll("[data-banner]").forEach(b => b.onclick = () => { r.banner = b.dataset.banner; saveRealms(); renderRealm(); });
-  $("#rname").onchange = e => { r.name = e.target.value.trim() || r.name; saveRealms(); renderRealm(); renderFeed(); };
+  $("#rname").onchange = e => { r.name = e.target.value.trim() || r.name; saveRealms(); renderRealm(); };
   $("#merge").onchange = e => {
     const o = realmOf(e.target.value); if (!o) return;
     r.lands.push(...o.lands); SESSIONS.filter(s => s.realm === o.id).forEach(s => s.realm = r.id);
-    REALMS = REALMS.filter(x => x.id !== o.id); saveRealms(); toast(`${o.name.toUpperCase()} ABSORBED INTO ${r.name.toUpperCase()}`);
-    renderStats(); renderFeed(); renderRealm();
+    REALMS = REALMS.filter(x => x.id !== o.id); saveRealms(); toast(`${o.name} absorbed into ${r.name}`); renderRealm();
   };
 }
 function renderComms(s) {
-  const st = STATE[s.state], relay = s.host !== "cmux";
-  const c = $("#comms");
+  const st = STATE[s.state], relay = s.host !== "cmux", c = $("#comms");
   c.innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
       <h3>${esc(s.callsign)}</h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${RANK[s.model].model}</dd>
@@ -562,59 +786,71 @@ function renderComms(s) {
       <textarea id="reply" placeholder="${s.state === "cast" ? "Queue word for when it finishes casting…" : "Type your reply…"}"></textarea>
       <div class="via">${relay ? `This mage dwells in <b>${esc(s.where)}</b>, outside cmux, so your words go <b>by raven</b>: it is told the message is relayed from you, not typed in its terminal.` : `Your words are typed straight into its <b>cmux</b> pane, as if you were there.`}</div>
       <div class="btns"><button class="btn" type="submit">${relay ? "Send by raven" : "Send word"}</button><button class="btn alt" type="button" data-act="portal">Open portal</button>
-      <span class="hint"><kbd>⌘</kbd>+<kbd>⏎</kbd> send</span></div></form>`}`;
-  $("#portrait").appendChild(makeMage(s, 6));
+      <span class="hint"><kbd>⌘</kbd> + <kbd>⏎</kbd> send</span></div></form>`}`;
+  $("#portrait").appendChild(makeMage(s, 3));
   const f = $("#orders");
   if (f) {
-    f.onsubmit = e => { e.preventDefault(); const t = $("#reply").value.trim(); if (!t) return toast("WRITE SOMETHING FIRST"); act(s, t, relay ? "SENT BY RAVEN" : "WORD SENT"); };
+    f.onsubmit = e => { e.preventDefault(); const t = $("#reply").value.trim(); if (!t) return toast("Write something first"); act(s, t, relay ? "Sent by raven" : "Word sent"); };
     $("#reply").onkeydown = e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) f.requestSubmit(); };
   }
   c.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
     const a = b.dataset.act;
-    if (a === "portal") return toast(s.host === "cmux" ? `PORTAL OPENED: ${s.where.toUpperCase()}` : `PORTAL OPENED: ${s.where.toUpperCase()} (WINDOW ONLY)`);
-    act(s, null, a === "grant" ? "SEAL GRANTED" : "SEAL REFUSED");
+    if (a === "portal") return toast(s.host === "cmux" ? `Portal opened: ${s.where}` : `Portal opened: ${s.where} (window only)`);
+    act(s, null, a === "grant" ? "Seal granted" : "Seal refused");
   });
 }
 function act(s, text, msg) {
   s.state = "cast"; s.since = Date.now();
-  s.xmit = [text ? `Understood. Working on: “${esc(text)}”` : msg === "SEAL GRANTED" ? "Seal received. Running it now." : "Understood. I'll find another way."];
-  s.brief = text ? `Acting on your word: ${text}` : msg === "SEAL GRANTED" ? "Permission granted; continuing." : "Permission refused; finding another route.";
-  toast(`${msg} → ${s.callsign.toUpperCase()}`); renderStats(); renderFeed(); renderRealm();
+  s.xmit = [text ? `Understood. Working on: “${esc(text)}”` : msg === "Seal granted" ? "Seal received. Running it now." : "Understood. I'll find another way."];
+  s.brief = text ? `Acting on your word: ${text}` : msg === "Seal granted" ? "Permission granted; continuing." : "Permission refused; finding another route.";
+  toast(`${msg} → ${s.callsign}`); renderRealm();
 }
 function goMap() { renderMap(); const el = document.querySelectorAll(".site")[ui.mapSel]; el && el.focus({ preventScroll: true }); }
-let tt; function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2200); }
+let tt; function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2400); }
 function nextRequest() {
-  const q = live().filter(needsYou).sort((a, b) => b.since - a.since); if (!q.length) return toast("NO ONE IS WAITING ON YOU");
+  const q = live().filter(needsYou).sort((a, b) => b.since - a.since); if (!q.length) return toast("No one is waiting on you");
   const i = ui.view === "realm" ? (q.findIndex(s => s.id === ui.session) + 1) % q.length : 0;
   ui.view === "map" ? travel(q[i].realm, q[i].id) : openRealm(q[i].realm, q[i].id);
 }
+function goSession(id) { const s = SESSIONS.find(x => x.id === id); if (!s) return; ui.view === "map" ? travel(s.realm, s.id) : openRealm(s.realm, s.id); }
 
-document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) { const s = SESSIONS.find(x => x.id === g.dataset.go); ui.view === "map" ? travel(s.realm, s.id) : openRealm(s.realm, s.id); } });
+/* scry (search) */
+$("#navMap").onclick = () => { if (ui.view !== "map") goMap(); };
+$("#navScry").onclick = () => { const b = $("#scryBox"); b.hidden = !b.hidden; if (!b.hidden) $("#scry").focus(); };
+$("#scry").oninput = e => {
+  const q = e.target.value.trim().toLowerCase();
+  const hits = !q ? [] : live().filter(s => [s.callsign, s.brief, realmOf(s.realm).name, RANK[s.model].title].join(" ").toLowerCase().includes(q)).slice(0, 6);
+  $("#results").innerHTML = hits.map(s => `<button class="raven" data-go="${s.id}"><span class="dot" style="background:${realmOf(s.realm).banner}"></span>
+    <span class="who">${esc(s.callsign)} <small>· ${esc(realmOf(s.realm).name)}</small></span><span class="t"><span class="g ${STATE[s.state].cls}">${STATE[s.state].glyph}</span></span></button>`).join("")
+    || (q ? `<span class="via">No mage answers to that.</span>` : "");
+};
+
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) goSession(g.dataset.go); });
 document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); $("#scryBox").hidden = false; $("#scry").focus(); return; }
   if (e.target.matches("textarea, input, select")) { if (e.key === "Escape") e.target.blur(); return; }
   if (e.key === "n" || e.key === "N") return nextRequest();
   if (ui.view === "map") {
-    const n = document.querySelectorAll(".site").length;
-    const mv = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-    if (mv !== undefined) { e.preventDefault(); ui.mapSel = (ui.mapSel + mv + n) % n; markMap(); document.querySelectorAll(".site")[ui.mapSel].focus(); }
+    const n = document.querySelectorAll(".site").length, mv = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (mv !== undefined && n) { e.preventDefault(); ui.mapSel = (ui.mapSel + mv + n) % n; markMap(); document.querySelectorAll(".site")[ui.mapSel].focus(); }
   } else {
     if (e.key === "Escape") return goMap();
     if (e.key === "r" || e.key === "R") { const t = $("#reply"); if (t) { e.preventDefault(); t.focus(); } }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault(); const ids = [...document.querySelectorAll(".row")].map(b => b.dataset.session);
-      const i = ids.indexOf(ui.session) + (e.key === "ArrowDown" ? 1 : -1); if (ids[i]) { ui.session = ids[i]; renderRealm(); document.querySelector(".row.sel").focus(); }
+      e.preventDefault(); const ids = [...document.querySelectorAll(".crow")].map(b => b.dataset.session);
+      const i = ids.indexOf(ui.session) + (e.key === "ArrowDown" ? 1 : -1); if (ids[i]) { ui.session = ids[i]; renderRealm(); document.querySelector(".crow.sel").focus(); }
     }
   }
 });
 
-/* animation clock: 2-frame sprite cycle */
-let frame = 0;
-paint($("#logoSprite"), mageRects("fable", "cast", 0), 3);
+/* animation clock */
+const logo = $("#logoSprite"); const drawLogo = fr => renderSprite(logo, 38, 54, 1.25, c => drawMage(c, "fable", "cast", fr));
+drawLogo(0);
 if (!still) setInterval(() => {
   frame++;
-  for (const sp of sprites) { if (!sp.c.isConnected) { sprites.delete(sp); continue; } paint(sp.c, mageRects(sp.s.model, sp.s.state, frame + (sp.s.id.length % 2)), sp.scale); }
-  paint($("#logoSprite"), mageRects("fable", "cast", frame), 3);
-}, 420);
+  for (const sp of sprites) { if (!sp.c.isConnected) { sprites.delete(sp); continue; } sp.draw(frame); }
+  drawLogo(frame);
+}, 260);
 
-renderStats(); renderFeed(); renderMap();
+renderMap();
 </script>
