@@ -14,7 +14,7 @@ import { findTranscript } from "./transcript";
 import type { Snapshot } from "./types";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const fontDirs = ["pixelify-sans", "jacquard-24"].map(f => path.join(root, "node_modules", "@fontsource", f, "files"));
+const fontDirs = ["pixelify-sans", "jacquard-24", "alegreya", "alegreya-sans"].map(f => path.join(root, "node_modules", "@fontsource", f, "files"));
 
 const cmux = findCmux();
 const uploadsDir = path.join(ARCANUM_DIR, "uploads");
