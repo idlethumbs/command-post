@@ -15,18 +15,22 @@ export function createMap(wrap, { onOpen, onSelect, siteContent }) {
   const world = wrap.querySelector(".world"), flash = wrap.querySelector(".flash");
   let realms = [], geoKey = "", bounds = { x0: 0, y0: 0, W: 1, H: 1 };
   let cam = { tx: 0, ty: 0, z: 1 }, touched = false, sel = 0;
-  try { const c = JSON.parse(sessionStorage.getItem("arcanum.cam") || "null"); if (c && Number.isFinite(c.z)) { cam = c; touched = true; } } catch {}
+  try {
+    const c = JSON.parse(sessionStorage.getItem("arcanum.cam.v2") || "null");
+    if (c && [c.z, c.tx, c.ty].every(Number.isFinite) && c.z >= Z_MIN && c.z <= Z_MAX) { cam = c; touched = true; }
+  } catch {}
 
+  const live = () => wrap.isConnected && wrap.clientWidth > 0 && wrap.clientHeight > 0;
   const apply = () => {
     world.style.transform = `translate(${cam.tx}px, ${cam.ty}px) scale(${cam.z})`;
     world.style.setProperty("--z", cam.z);
     wrap.dataset.zoom = cam.z < 0.3 ? "far" : cam.z < 0.5 ? "mid" : "near";
-    try { sessionStorage.setItem("arcanum.cam", JSON.stringify(cam)); } catch {}
+    if (live()) try { sessionStorage.setItem("arcanum.cam.v2", JSON.stringify(cam)); } catch {}
   };
   const toScreen = r => ({ x: (r.pos.x - bounds.x0) * S, y: (r.pos.y - bounds.y0) * S });
 
   function fit() {
-    if (!realms.length) return;
+    if (!realms.length || !live()) return;   // a detached or zero-sized map must never compute (and save) a camera
     const vw = wrap.clientWidth, vh = wrap.clientHeight, pad = REALM_R * S * 1.5;
     const xs = realms.map(r => toScreen(r).x), ys = realms.map(r => toScreen(r).y);
     const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad, minY = Math.min(...ys) - pad * 1.1, maxY = Math.max(...ys) + pad * 0.8;
@@ -65,7 +69,8 @@ export function createMap(wrap, { onOpen, onSelect, siteContent }) {
     if (z === "fit") { fit(); touched = false; return; }
     zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, z === "in" ? 1.35 : 1 / 1.35);
   });
-  new ResizeObserver(() => { if (!touched) fit(); }).observe(wrap);
+  const ro = new ResizeObserver(() => { if (!wrap.isConnected) return ro.disconnect(); if (!touched) fit(); });
+  ro.observe(wrap);
 
   function rebuildWorld() {
     const xs = realms.map(r => r.pos.x), ys = realms.map(r => r.pos.y);

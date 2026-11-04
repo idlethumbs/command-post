@@ -100,8 +100,9 @@ function siteContent(r) {
   const pins = [n("counsel") && `<i class="counsel">!${n("counsel")}</i>`, n("seal") && `<i class="seal">?${n("seal")}</i>`, n("cast") && `<i class="cast">✦${n("cast")}</i>`].filter(Boolean).join("");
   return { pins, needs: ts.some(needsYou), fresh: Date.now() - r.discoveredAt < NEW_FOR, label: `${r.name}: ${ts.length} mages, ${ts.filter(needsYou).length} waiting on you` };
 }
-function renderMap() {
+function renderMap(fromRoute) {
   ui.view = "map";
+  if (!fromRoute) setRoute(true);
   const newest = data.sessions.filter(needsYou).sort((a, b) => b.since - a.since)[0];
   $("#view").innerHTML = data.realms.length ? `<div class="mapwrap" id="mapwrap"></div>` :
     `<div class="mapwrap"><div class="empty"><div><h2 style="font-family:var(--f-display);font-weight:400;font-size:40px;margin:0">No realms yet</h2><p>Start a Claude Code session in any project and its realm appears here.</p></div></div></div>`;
@@ -124,9 +125,11 @@ function travel(rid, sid) { if (!map) return openRealm(rid, sid); map.flyTo(rid,
 function goMap() { renderMap(); }
 
 /* ---------------- realm view ---------------- */
-function openRealm(rid, sid) {
+function openRealm(rid, sid, fromRoute) {
   const t = troopsOf(rid).sort(byNeed);
+  const entering = ui.view !== "realm" || ui.realm !== rid;
   ui.view = "realm"; ui.realm = rid; ui.session = sid || t[0]?.id || null; ui.charter = false;
+  if (!fromRoute) setRoute(entering);
   renderRealm(true); $("#view").scrollTop = 0;
 }
 function renderRealm(entering) {
@@ -136,6 +139,7 @@ function renderRealm(entering) {
   const t = troopsOf(r.id).sort(byNeed);
   if (!t.some(s => s.id === ui.session)) ui.session = t[0]?.id ?? null;
   const cur = t.find(s => s.id === ui.session); if (cur) markSeen(cur);
+  setRoute(false);
   document.documentElement.style.setProperty("--portrait-bg", `linear-gradient(180deg, ${B.sky[0]}, ${B.sky[1]} 62%, ${B.ramp[3]} 62%, ${B.ramp[1]})`);
   $("#view").innerHTML = `<div class="realm${entering ? " in" : ""}">
     <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${tint(r.banner, .15)}">${esc(r.name)}</h2>
@@ -407,6 +411,19 @@ document.addEventListener("click", async e => {
   const r = await post(`/api/sessions/${encodeURIComponent(b.dataset.restore)}/restore`, {}); toast(r.message ?? r.error);
 });
 
+/* ---------------- routing: the URL remembers where you are, so a refresh keeps you there ---------------- */
+function setRoute(push) {
+  const h = ui.view === "realm" ? `#/realm/${encodeURIComponent(ui.realm)}${ui.session ? "/" + encodeURIComponent(ui.session) : ""}` : "#/";
+  if (location.hash !== h) history[push ? "pushState" : "replaceState"](null, "", h);
+}
+function route() {
+  const m = /^#\/realm\/([^/]+)(?:\/([^/]+))?$/.exec(location.hash);
+  const rid = m && decodeURIComponent(m[1]), sid = m?.[2] && decodeURIComponent(m[2]);
+  if (rid && realmOf(rid)) openRealm(rid, sid && data.sessions.some(s => s.id === sid) ? sid : undefined, true);
+  else renderMap(true);
+}
+addEventListener("popstate", route);
+
 /* ---------------- navigation ---------------- */
 function nextRequest() {
   const q = data.sessions.filter(needsYou).sort((a, b) => b.since - a.since);
@@ -472,4 +489,4 @@ drawLogo(0);
 if (!still) setInterval(() => { tick(); drawLogo(performance.now() / 260 | 0); }, 260);
 setInterval(renderSide, 30000);
 
-fetch("/api/state").then(r => r.json()).then(d => { data = d; renderMap(); }).catch(() => renderMap()).finally(connect);
+fetch("/api/state").then(r => r.json()).then(d => { data = d; route(); }).catch(() => renderMap(true)).finally(connect);
