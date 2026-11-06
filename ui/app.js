@@ -40,6 +40,12 @@ const home = p => p.replace(/^\/Users\/[^/]+/, "~");
 /* claude-opus-5-5 → Opus 5.5 · claude-haiku-4-5-20251001 → Haiku 4.5 */
 const prettyModel = id => { const m = /claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-|$)/.exec(id ?? ""); return m ? `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}${m[3] ? "." + m[3] : ""}` : id; };
 
+/* mana: context fullness. Warm from 70%, hot from 85% (time for /compact) */
+const manaClass = m => m.pct >= 85 ? " hot" : m.pct >= 70 ? " warm" : "";
+const kTok = n => n >= 1e6 ? `${(n / 1e6).toFixed(n % 1e6 ? 1 : 0)}M` : `${Math.round(n / 1000)}k`;
+const manaBar = m => m ? `<span class="mana${manaClass(m)}" style="--pct:${m.pct}%" title="Context ${m.pct}% full · ${kTok(m.used)} of ${kTok(m.window)}${m.inferred ? " (window size inferred)" : ""}"><i></i></span>` : "";
+const manaRow = m => m ? `<dt>MANA</dt><dd><span class="manarow">${manaBar(m)}<small>${m.pct}% · ${kTok(m.used)} of ${kTok(m.window)}${m.inferred ? "*" : ""}</small>${m.pct >= 85 ? `<span class="due">due a /compact</span>` : ""}</span></dd>` : "";
+
 /* tiny, safe markdown for the latest missive: paragraphs, bullets, headings, tables, `code`, **bold** */
 function missive(md) {
   if (!md) return "<p>No word yet.</p>";
@@ -184,7 +190,7 @@ function renderRealm(entering) {
     const b = document.createElement("button"); b.className = "mage" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
     b.appendChild(makeMage(s, 2, `${RANK[s.model].title} ${s.name}: ${STATE[s.state].label}`));
     b.insertAdjacentHTML("afterbegin", `<span class="bubble ${STATE[s.state].cls}">${STATE[s.state].glyph}</span>`);
-    b.insertAdjacentHTML("beforeend", `<span class="name">${esc(s.name)}</span>`);
+    b.insertAdjacentHTML("beforeend", `<span class="name">${esc(s.name)}</span>${manaBar(s.mana)}`);
     b.onclick = () => { ui.session = s.id; renderRealm(); };
     $("#troupe").appendChild(b);
   }
@@ -192,7 +198,7 @@ function renderRealm(entering) {
     const b = document.createElement("button"); b.className = "mage departed" + (d.id === ui.session ? " sel" : ""); b.dataset.session = d.id;
     b.appendChild(makeMage({ id: d.id, model: d.model, state: "rest" }, 2, `${RANK[d.model].title} ${d.name}: departed`));
     b.insertAdjacentHTML("afterbegin", `<span class="bubble ended">☾</span>`);
-    b.insertAdjacentHTML("beforeend", `<span class="name">${esc(d.name)}</span>`);
+    b.insertAdjacentHTML("beforeend", `<span class="name">${esc(d.name)}</span>${manaBar(d.mana)}`);
     b.onclick = () => { ui.session = d.id; renderRealm(); };
     $("#troupe").appendChild(b);
   }
@@ -200,7 +206,7 @@ function renderRealm(entering) {
   if (ci) for (const s of t) {
     const w = document.createElement("div"); w.className = "crowwrap";
     const b = document.createElement("button"); b.className = "crow" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
-    b.innerHTML = `<span><span class="cs">${esc(s.name)}</span><span class="rk">${RANK[s.model].title} · ${ago(s.since)}</span></span><span class="chip ${STATE[s.state].cls}">${STATE[s.state].chip}</span>`;
+    b.innerHTML = `<span><span class="cs">${esc(s.name)}</span><span class="rk">${RANK[s.model].title} · ${ago(s.since)}</span>${manaBar(s.mana)}</span><span class="chip ${STATE[s.state].cls}">${STATE[s.state].chip}</span>`;
     b.onclick = () => { ui.session = s.id; renderRealm(); };
     w.appendChild(b);
     w.insertAdjacentHTML("beforeend", `<button class="x" data-dismiss="${esc(s.id)}" aria-label="Dismiss ${esc(s.name)}" title="Dismiss from Arcanum">×</button>`);
@@ -343,6 +349,7 @@ function renderDeparted(d) {
       <h3>${esc(d.name)}<span class="actions">${d.promote ? `<button class="btn small" data-promote="${esc(d.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(d.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[d.model].title} · ${esc(prettyModel(d.modelId) ?? RANK[d.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ended">DEPARTED</span> ended ${ago(d.endedAt)} ago</dd>
+      ${manaRow(d.mana)}
       <dt>FOLDER</dt><dd class="crumb">${esc(home(d.cwd))}${d.branch ? ` · ${esc(d.branch)}` : ""}</dd></dl></div></div>
     ${d.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(d.title)}</b></div>` : ""}
     <div class="paper brief"><span class="lbl">The matter at hand</span><p>${esc(d.briefing)}</p></div>
@@ -377,6 +384,7 @@ function renderComms(s) {
       <h3>${esc(s.name)}<span class="actions">${s.promote ? `<button class="btn small" data-promote="${esc(s.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
+      ${manaRow(s.mana)}
       <dt>DWELLS IN</dt><dd>${esc(s.where)}${s.unreachable ? ` <span class="chip rest" title="Its pane or tab couldn't be found">UNREACHABLE</span>` : ""}</dd>
       <dt>FOLDER</dt><dd class="crumb">${esc(home(s.cwd))}${s.branch ? ` · ${esc(s.branch)}` : ""}</dd></dl></div></div>
     ${s.note ? `<div class="via">${esc(s.note)}</div>` : ""}

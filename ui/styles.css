@@ -378,3 +378,15 @@
   .modal input[readonly] { opacity: .75; }
   .where { display: grid; gap: 8px; }
   .where .check code { font-size: 13px; color: var(--gold); }
+
+  /* mana: how full a mage's context window is */
+  .mana { --m: #5b8cff; display: block; height: 4px; border-radius: 2px; background: rgba(15,12,30,.75); box-shadow: 0 0 0 1px var(--ink); overflow: hidden; }
+  .mana i { display: block; height: 100%; width: var(--pct); background: linear-gradient(90deg, #3b5bdb, var(--m)); }
+  .mana.warm { --m: #f2c14e; } .mana.warm i { background: linear-gradient(90deg, #c08a20, var(--m)); }
+  .mana.hot { --m: #ef5470; } .mana.hot i { background: linear-gradient(90deg, #a02a40, var(--m)); animation: blink 1.4s steps(2) infinite; }
+  .mage .mana { width: 46px; margin-top: 3px; }
+  .crow .mana { width: 100%; margin-top: 4px; height: 3px; }
+  .manarow { display: flex; gap: 8px; align-items: center; }
+  .manarow .mana { width: 120px; height: 6px; }
+  .manarow small { color: var(--muted); font-size: 13px; }
+  .manarow .due { color: var(--counsel); font-size: 13px; }

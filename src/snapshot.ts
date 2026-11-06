@@ -1,6 +1,7 @@
 import path from "node:path";
 import { classify, modelOf } from "./classify";
 import { loadDismissed } from "./dismissed";
+import { defaultModel, manaOf } from "./mana";
 import { departedModel, departedName, findEnded } from "./departed";
 import { portalPrecision } from "./portal";
 import { replyCapability, sealCapability } from "./send";
@@ -37,6 +38,7 @@ export function buildSnapshot(d: SnapshotDeps): Snapshot {
   const realmOf = assignRealms([...entries.map(e => e.cwd), ...ended.map(e => e.t.cwd!)], cfg, d.env, now);
   if (JSON.stringify(cfg) !== before) saveConfig(d.arcanumDir, cfg);
 
+  const defModel = defaultModel(d.claudeDir);
   const sessions: Session[] = entries.map(e => {
     const file = findTranscript(d.claudeDir, e.sessionId);
     let t: TranscriptSummary = {};
@@ -53,14 +55,15 @@ export function buildSnapshot(d: SnapshotDeps): Snapshot {
     return {
       id: e.sessionId, pid: e.pid, realmId: realmOf.get(e.cwd)!, name: e.name, title: t.aiTitle, model: modelOf(t.model), modelId: t.model,
       state, since, host, where: WHERE[host], briefing: briefingOf(t), lastText: last && (last.length > 4000 ? "…" + last.slice(-4000) : last),
-      waitingFor: e.waitingFor, cwd: e.cwd, branch: t.gitBranch, jobId: e.jobId, tmux: e.tmux, note, status: e.status, recent: t.recent,
+      waitingFor: e.waitingFor, cwd: e.cwd, branch: t.gitBranch, jobId: e.jobId, tmux: e.tmux, note, status: e.status, recent: t.recent, mana: manaOf(t, modelOf(t.model), defModel),
     };
   });
   for (const s of sessions) { s.portal = portalPrecision(s, !!d.hasCmux); s.reply = replyCapability(s, !!d.hasCmux); s.seal = sealCapability(s, !!d.hasCmux); }
   const departed: DepartedMage[] = ended.map(e => {
     const last = e.t.lastAssistantText?.text;
     return { id: e.id, realmId: realmOf.get(e.t.cwd!)!, name: departedName(e), title: e.t.aiTitle, model: departedModel(e), modelId: e.t.model, endedAt: e.endedAt,
-      cwd: e.t.cwd!, branch: e.t.gitBranch, briefing: briefingOf(e.t), lastText: last && (last.length > 4000 ? "…" + last.slice(-4000) : last), recent: e.t.recent };
+      cwd: e.t.cwd!, branch: e.t.gitBranch, briefing: briefingOf(e.t), lastText: last && (last.length > 4000 ? "…" + last.slice(-4000) : last), recent: e.t.recent,
+      mana: manaOf(e.t, departedModel(e), defModel) };
   });
   // a Wilds mage's folder can become a realm, unless it's a workspace folder holding many projects
   const promotable = (realmId: string, cwd: string) => realmId === WILDS_ID && !d.env.isWilds(cwd);

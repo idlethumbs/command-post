@@ -16,6 +16,8 @@ export interface TranscriptSummary {
   awaySummary?: { text: string; at: number };
   lastAssistantText?: { text: string; at: number };
   recent?: Exchange[];
+  /** Tokens in context at the last turn (input + cache + output), and the most ever seen. */
+  context?: { tokens: number; peak: number; at: number };
 }
 /** One message in the conversation, as you'd see it: your words or the mage's reply (tool chatter left out). */
 export interface Exchange { who: "you" | "mage"; text: string; at: number; images?: number }
@@ -32,10 +34,13 @@ export interface Session {
   jobId?: string; tmux?: string; portal?: "exact" | "app" | "none"; note?: string;
   recent?: Exchange[];
   status?: string; reply?: "type" | "none"; seal?: boolean; unreachable?: boolean; promote?: boolean;
+  mana?: Mana;
 }
 
 export interface DismissedMage { id: string; name: string; realmId: string; at: number; alive: boolean }
 /** A session whose process has ended but whose conversation can be resumed. */
 export interface DepartedMage { id: string; realmId: string; name: string; title?: string; model: Model; modelId?: string; endedAt: number;
-  cwd: string; branch?: string; briefing: string; lastText?: string; recent?: Exchange[]; promote?: boolean }
+  cwd: string; branch?: string; briefing: string; lastText?: string; recent?: Exchange[]; promote?: boolean; mana?: Mana }
+/** Context fullness: how much of the window the conversation fills. `window` is inferred (see mana.ts). */
+export interface Mana { used: number; window: number; pct: number; inferred: boolean }
 export interface Snapshot { generatedAt: number; realms: Realm[]; sessions: Session[]; dismissed?: DismissedMage[]; departed?: DepartedMage[] }

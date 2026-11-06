@@ -26,6 +26,11 @@ export function parseTranscript(text: string): TranscriptSummary {
     if (typeof r.entrypoint === "string") s.entrypoint = r.entrypoint;
     if (r.type === "assistant" && r.message) {
       if (r.message.model) s.model = r.message.model;
+      const u = r.message.usage;
+      if (u && !r.isSidechain) {
+        const tokens = (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.output_tokens ?? 0);
+        if (tokens > 0) s.context = { tokens, peak: Math.max(tokens, s.context?.peak ?? 0), at: at ?? 0 };
+      }
       const t = textOf(r.message.content);
       if (t) {
         const prev = s.lastAssistantText;
