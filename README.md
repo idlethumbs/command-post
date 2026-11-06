@@ -95,6 +95,7 @@ The first time a portal uses AppleScript, macOS asks you to allow your terminal 
 - When a mage starts asking for you, a raven flies from its realm (or the mage) to the ravens list. The realm pulses and the mage hops.
 - Sending word, granting or refusing a seal, and arriving by fast travel each have their own sparkle burst.
 - The map's sea glints and cloud shadows drift.
+- **Notifications** (Grimoire: Off, Seals only, All ravens) send a macOS notification when a mage starts asking for you and Arcanum isn't the focused window. Clicking one brings Arcanum forward on that mage. Each mage has one notification, which updates in place, and four or more at once become a single summary. They come from the Arcanum window, so one must be open, even in the background. Brave asks for permission the first time you turn them on. If nothing appears, allow Brave in System Settings → Notifications. **Preview a raven** sends a test notification. The window title also counts mages waiting on you, e.g. "(3) Arcanum".
 - **Grimoire** (sidebar) holds the settings: **chiptune sounds**, off by default and synthesised in the browser with no audio files; **volume**; **motion**, which follows macOS by default, or Full / Calm; and **Preview a raven**.
 
 ## Claude Code hooks (installed 6 Nov 2026)

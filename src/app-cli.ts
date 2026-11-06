@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cmd = process.argv[2] ?? "install", target = appPath();
 
 if (cmd === "install") {
-  installApp(target, { repo: root, node: process.execPath, pathEnv: process.env.PATH ?? "/usr/bin:/bin", port: PORT }, path.join(root, "assets", "arcanum-icon.png"));
+  installApp(target, { repo: root, node: process.execPath, pathEnv: process.env.PATH ?? "/usr/bin:/bin", port: PORT }, path.join(root, "ui", "arcanum-icon.png"));
   console.log(`Installed ${target}\nDrag it from Finder to the Dock (open ${path.dirname(target)}). Clicking it wakes Arcanum if it's asleep and opens its window.\nReinstall after moving the repo or switching Node versions.`);
 } else if (cmd === "uninstall") {
   if (existsSync(target)) rmSync(target, { recursive: true }); console.log(`Removed ${target}. Also remove it from the Dock if it's pinned there.`);

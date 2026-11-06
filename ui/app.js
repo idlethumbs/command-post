@@ -3,11 +3,12 @@ import { BANNERS, BIOME, LANDMARKS, RANK, STATE, buildBackdrop, drawMage, makeLa
 import { createMap } from "./map.js";
 import { burst, initFx, pulse, raven } from "./fx.js";
 import { cue, setSound } from "./sound.js";
+import { ask, notices, notify, permission, wanted } from "./notify.js";
 
 const $ = s => document.querySelector(s);
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 /* Grimoire settings (per browser): sound is off unless you turn it on; motion follows macOS unless you choose */
-const prefs = { sound: false, volume: 0.5, motion: "auto", summonFocus: false, showDeparted: true };
+const prefs = { sound: false, volume: 0.5, motion: "auto", summonFocus: false, showDeparted: true, notify: "off" };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem("arcanum.prefs") || "{}")); } catch {}
 const osCalm = matchMedia("(prefers-reduced-motion: reduce)");
 const motionOK = () => prefs.motion === "full" || (prefs.motion === "auto" && !osCalm.matches);
@@ -81,6 +82,8 @@ function missive(md) {
 /* ---------------- sidebar ---------------- */
 function renderSide() {
   const L = data.sessions, n = k => L.filter(s => s.state === k).length;
+  const waiting = L.filter(needsYou).length;
+  document.title = waiting ? `(${waiting}) Arcanum` : "Arcanum";
   $("#sumline").textContent = `${data.realms.length} realms · ${L.length} mages · ${n("cast")} casting`;
   $("#awaitRow").innerHTML = `<span class="pill counsel">! ${n("counsel")} counsel</span><span class="pill seal">? ${n("seal")} seal</span>
     <button class="next" id="nextBtn" title="Next waiting mage (N)">Next ▸</button>`;
@@ -540,6 +543,9 @@ function renderGrim() {
   const box = $("#grimBox");
   box.innerHTML = `<div class="rowx"><span>Chiptune sounds</span><button class="switch" role="switch" id="gSound" aria-checked="${prefs.sound}" aria-label="Chiptune sounds"></button></div>
     <div class="rowx"${prefs.sound ? "" : " hidden"}><label for="gVol">Volume</label><input type="range" id="gVol" min="0.1" max="1" step="0.1" value="${prefs.volume}"></div>
+    <div class="rowx"><label for="gNotify">Notifications</label><select id="gNotify">
+      <option value="off"${prefs.notify === "off" ? " selected" : ""}>Off</option><option value="seals"${prefs.notify === "seals" ? " selected" : ""}>Seals only</option><option value="all"${prefs.notify === "all" ? " selected" : ""}>All ravens</option></select></div>
+    ${prefs.notify !== "off" && permission() === "denied" ? `<small class="rowx" style="color:var(--muted)">Brave is blocking them: allow notifications for this site, and for Brave in System Settings → Notifications.</small>` : ""}
     <div class="rowx"><span>Show departed mages</span><button class="switch" role="switch" id="gDeparted" aria-checked="${prefs.showDeparted}" aria-label="Show departed mages"></button></div>
     <div class="rowx"><label for="gMotion">Motion</label><select id="gMotion">
       <option value="auto"${prefs.motion === "auto" ? " selected" : ""}>Follow macOS</option><option value="full"${prefs.motion === "full" ? " selected" : ""}>Full spellwork</option><option value="calm"${prefs.motion === "calm" ? " selected" : ""}>Calm (no motion)</option></select></div>
@@ -552,12 +558,22 @@ function renderGrim() {
   $("#gPreview").onclick = () => {
     const here = ui.view === "realm" ? troopsOf(ui.realm) : data.sessions;
     const s = here.find(x => x.id === ui.session) ?? here[0];
-    s ? playEvents([{ kind: "counsel", s }]) : toast("No mages to preview with.");
+    if (!s) return toast("No mages to preview with.");
+    playEvents([{ kind: "counsel", s }]);
+    if (prefs.notify !== "off") notify(notices([{ kind: "counsel", s }], id => realmOf(id)?.name), goSession, true);
   };
   $("#gDeparted").onclick = () => { prefs.showDeparted = !prefs.showDeparted; applyPrefs(); renderGrim(); ui.view === "map" ? renderMap(true) : renderRealm(); };
   $("#gSound").onclick = () => { prefs.sound = !prefs.sound; applyPrefs(); renderGrim(); if (prefs.sound) cue.test(); };
   const vol = $("#gVol"); if (vol) vol.onchange = () => { prefs.volume = Number(vol.value); applyPrefs(); cue.test(); };
   $("#gMotion").onchange = e => { prefs.motion = e.target.value; applyPrefs(); };
+  $("#gNotify").onchange = async e => {
+    prefs.notify = e.target.value; applyPrefs();
+    if (prefs.notify !== "off") {
+      const p = await ask();
+      toast(p === "granted" ? "Notifications on: they arrive while Arcanum isn't the focused window" : p === "unsupported" ? "This browser can't send notifications" : "Brave blocked notifications for Arcanum");
+    }
+    renderGrim();
+  };
 }
 $("#navGrim").onclick = () => { const b = $("#grimBox"); b.hidden = !b.hidden; if (!b.hidden) renderGrim(); };
 
@@ -653,6 +669,7 @@ function onData(next) {
   const prevRealms = JSON.stringify(data.realms), prevSessions = JSON.stringify([data.sessions, data.departed]);
   const ev = eventsFrom(next);
   data = next;
+  notify(notices(ev.filter(e => wanted(prefs.notify, e.kind)), id => realmOf(id)?.name), goSession);
   const realmsChanged = JSON.stringify(data.realms) !== prevRealms, sessionsChanged = JSON.stringify([data.sessions, data.departed]) !== prevSessions;
   renderGone();
   if (!realmsChanged && !sessionsChanged) return;

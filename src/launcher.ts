@@ -87,7 +87,7 @@ export function infoPlist(): string {
 
 export const appPath = (dir = path.join(os.homedir(), "Applications")) => path.join(dir, "Arcanum.app");
 
-/** Writes Arcanum.app (replacing an older one); the icon is built from assets/arcanum-icon.png. */
+/** Writes Arcanum.app (replacing an older one); the icon is built from ui/arcanum-icon.png. */
 export function installApp(target: string, o: LauncherOpts, iconPng: string): void {
   rmSync(target, { recursive: true, force: true });
   const contents = path.join(target, "Contents"), macos = path.join(contents, "MacOS"), res = path.join(contents, "Resources");
