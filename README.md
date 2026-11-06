@@ -55,7 +55,7 @@ Every 5 seconds Arcanum checks that each session's cmux pane or Terminal/iTerm t
 ## Summon and dismiss
 
 - **Summon a mage** (in a realm, or from the sidebar) opens a new cmux workspace in one of the realm's folders, running `claude --model haiku|sonnet|opus|fable`, optionally with your first words. It starts in the background unless you tick **Switch to it in cmux now**, and Arcanum remembers your choice. The new mage appears in the realm within a second or two.
-- **Dismiss** (× on a row, or the Dismiss button) removes a mage from Arcanum for good. **The session isn't closed**: it keeps running in its terminal. Restore it from **Dismissed mages** in the sidebar. The list lives in `~/.arcanum/dismissed.json`.
+- **Dismiss** (× on a row, or the Dismiss button) removes a mage from Arcanum for good. **By default the session isn't closed**: it keeps running in its terminal. For a cmux mage Arcanum can find, tick **Also close its cmux tab** to end it too: only that tab closes (other tabs or splits in the workspace stay), and the mage is dismissed only once the tab has really closed. Restore it from **Dismissed mages** in the sidebar. The list lives in `~/.arcanum/dismissed.json`.
 
 ## Departed mages and Resume
 

@@ -12,7 +12,7 @@ export interface ServerDeps { presence?(client: string, visible: boolean): void;
   sendWord?(sessionId: string, text: string, images: string[]): Promise<{ ok: boolean; message: string } | undefined>;
   answerSeal?(sessionId: string, decision: "grant" | "refuse"): Promise<{ ok: boolean; message: string } | undefined>;
   readSeal?(sessionId: string): Promise<{ request: string; question: string } | undefined>;
-  dismiss?(sessionId: string): { ok: boolean; message: string } | undefined;
+  dismiss?(sessionId: string, opts: { close: boolean }): Promise<{ ok: boolean; message: string } | undefined>;
   restore?(sessionId: string): { ok: boolean; message: string } | undefined;
   resume?(sessionId: string, req: { prompt?: string; focus: boolean }): Promise<{ ok: boolean; message: string } | undefined>;
   found?(req: { name: string; folder?: string; create?: boolean; git?: boolean }): { ok: boolean; message: string; realmId?: string };
@@ -107,7 +107,9 @@ export function createArcanumServer(d: ServerDeps) {
     }
     const dm = /^\/api\/sessions\/([\w-]+)\/(dismiss|restore)$/.exec(p);
     if (dm && req.method === "POST") {
-      const r = dm[2] === "dismiss" ? d.dismiss?.(dm[1]) : d.restore?.(dm[1]);
+      let body: any = {};
+      if (dm[2] === "dismiss") try { body = await readJson(req); } catch (e) { return send(res, 400, { error: (e as Error).message }); }
+      const r = dm[2] === "dismiss" ? await d.dismiss?.(dm[1], { close: body.close === true }) : d.restore?.(dm[1]);
       return r ? send(res, 200, r) : send(res, 404, { error: "No mage with that id." });
     }
     const re = /^\/api\/departed\/([0-9a-f-]{36})\/resume$/.exec(p);

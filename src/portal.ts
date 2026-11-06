@@ -133,8 +133,16 @@ export function planPortal(s: Session, ctx: PortalCtx): PortalPlan {
   }
 }
 
+/** Close the mage's own cmux tab, named by id: `close-surface` with no surface would close whatever is focused. */
+export function planClose(s: Session, ctx: PortalCtx): { step: Step } | { error: string } {
+  if (s.host !== "cmux" || !ctx.cmux) return { error: "Only cmux sessions can be closed from Arcanum." };
+  const loc = ctx.cmux.layout && surfaceOf(s, ctx.cmux.layout, ctx.ps);
+  if (!loc) return { error: `Couldn't find ${s.name}'s cmux tab, so nothing was closed or dismissed.` };
+  return { step: { cmd: ctx.cmux.bin, args: ["close-surface", "--surface", loc.surface, "--workspace", loc.workspace] } };
+}
+
 /* ---------- running ---------- */
-const run = (s: Step) => new Promise<string>((ok, fail) =>
+export const run = (s: Step) => new Promise<string>((ok, fail) =>
   execFile(s.cmd, s.args, { timeout: 8000, env: { ...process.env, CMUX_QUIET: "1" } }, (e, out, err) => e ? fail(new Error((err || e.message).trim())) : ok(out.trim())));
 
 export async function runPortal(plan: PortalPlan): Promise<{ ok: boolean; precision: PortalPlan["precision"]; message: string }> {
