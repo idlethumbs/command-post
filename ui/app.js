@@ -44,7 +44,8 @@ const prettyModel = id => { const m = /claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-|
 const manaClass = m => m.pct >= 85 ? " hot" : m.pct >= 70 ? " warm" : "";
 const kTok = n => n >= 1e6 ? `${(n / 1e6).toFixed(n % 1e6 ? 1 : 0)}M` : `${Math.round(n / 1000)}k`;
 const manaBar = m => m ? `<span class="mana${manaClass(m)}" style="--pct:${m.pct}%" title="Context ${m.pct}% full · ${kTok(m.used)} of ${kTok(m.window)}${m.inferred ? " (window size inferred)" : ""}"><i></i></span>` : "";
-const manaRow = m => m ? `<dt>MANA</dt><dd><span class="manarow">${manaBar(m)}<small>${m.pct}% · ${kTok(m.used)} of ${kTok(m.window)}${m.inferred ? "*" : ""}</small>${m.pct >= 85 ? `<span class="due">due a /compact</span>` : ""}</span></dd>` : "";
+const usd = n => n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(2)}`;
+const manaRow = (m, cost) => m ? `<dt>MANA</dt><dd><span class="manarow">${manaBar(m)}<small>${m.pct}% · ${kTok(m.used)} of ${kTok(m.window)}${m.inferred ? "*" : ""}${cost !== undefined ? ` · ${usd(cost)} spent` : ""}</small>${m.pct >= 85 ? `<span class="due">due a /compact</span>` : ""}</span></dd>` : "";
 
 /* tiny, safe markdown for the latest missive: paragraphs, bullets, headings, tables, `code`, **bold** */
 function missive(md) {
@@ -170,7 +171,7 @@ function renderRealm(entering) {
   document.documentElement.style.setProperty("--portrait-bg", `linear-gradient(180deg, ${B.sky[0]}, ${B.sky[1]} 62%, ${B.ramp[3]} 62%, ${B.ramp[1]})`);
   $("#view").innerHTML = `<div class="realm${entering ? " in" : ""}">
     <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${tint(r.banner, .15)}">${esc(r.name)}</h2>
-      <span class="meta">${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}${dep.length ? ` · ${dep.length} departed` : ""}</span>
+      <span class="meta">${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}${dep.length ? ` · ${dep.length} departed` : ""}${t.some(x => x.costUsd !== undefined) ? ` · ${usd(t.reduce((a, x) => a + (x.costUsd ?? 0), 0))} spent by live mages` : ""}</span>
       <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>R</kbd> reply · <kbd>P</kbd> portal · <kbd>esc</kbd> map</span>
       ${r.lands.length ? `<button class="btn" id="summonHere">✧ Summon a mage</button>` : ""}
       ${r.id === "wilds" ? "" : `<button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button>`}</div></div>
@@ -252,6 +253,9 @@ function exchangeBlock(s) {
       <span class="tx">${e.images ? `<span class="img">[${e.images} image${e.images > 1 ? "s" : ""}]</span>` : ""}${esc(e.text)}</span><span class="at">${ago(e.at)}</span></li>`).join("")}</ul></section>`;
 }
 function sealBlock(s) {
+  if (s.sealVia === "hook") return `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req" style="white-space:pre-wrap">${esc(s.request ?? "A tool")}</div>
+    <div class="btns"><button class="btn" data-seal="grant">Grant seal</button><button class="btn deny" data-seal="refuse">Refuse</button>${portalButton(s)}
+    <span class="hint">Held here for you; if you don't answer within ~2 minutes, ${esc(s.where)} asks itself</span></div></div>`;
   if (s.unreachable) return unreachableNote(s);
   if (!s.seal) return `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req">A permission prompt is open in its terminal.</div>
     <div class="btns">${portalButton(s)}<span class="soon-note">${esc(s.where)} can't be sent keys, so answer it there.</span></div></div>`;
@@ -384,7 +388,7 @@ function renderComms(s) {
       <h3>${esc(s.name)}<span class="actions">${s.promote ? `<button class="btn small" data-promote="${esc(s.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
-      ${manaRow(s.mana)}
+      ${manaRow(s.mana, s.costUsd)}
       <dt>DWELLS IN</dt><dd>${esc(s.where)}${s.unreachable ? ` <span class="chip rest" title="Its pane or tab couldn't be found">UNREACHABLE</span>` : ""}</dd>
       <dt>FOLDER</dt><dd class="crumb">${esc(home(s.cwd))}${s.branch ? ` · ${esc(s.branch)}` : ""}</dd></dl></div></div>
     ${s.note ? `<div class="via">${esc(s.note)}</div>` : ""}
@@ -539,7 +543,12 @@ function renderGrim() {
     <div class="rowx"><span>Show departed mages</span><button class="switch" role="switch" id="gDeparted" aria-checked="${prefs.showDeparted}" aria-label="Show departed mages"></button></div>
     <div class="rowx"><label for="gMotion">Motion</label><select id="gMotion">
       <option value="auto"${prefs.motion === "auto" ? " selected" : ""}>Follow macOS</option><option value="full"${prefs.motion === "full" ? " selected" : ""}>Full spellwork</option><option value="calm"${prefs.motion === "calm" ? " selected" : ""}>Calm (no motion)</option></select></div>
+    <div class="rowx"><span>Claude hooks</span><small id="gHooks" style="color:var(--muted)">checking…</small></div>
     <button class="btn ghost small" id="gPreview" type="button">Preview a raven</button>`;
+  fetch("/api/hooks").then(r => r.json()).then(h => {
+    const el = $("#gHooks"); if (!el) return;
+    el.textContent = h.installed ? `on · ${h.eventsLast10m} events in 10 min${h.relay ? " · mana exact" : ""}` : "off (run pnpm hooks plan)";
+  }).catch(() => {});
   $("#gPreview").onclick = () => {
     const here = ui.view === "realm" ? troopsOf(ui.realm) : data.sessions;
     const s = here.find(x => x.id === ui.session) ?? here[0];
@@ -666,6 +675,11 @@ function connect() {
   es.onmessage = e => { $("#live").classList.remove("off"); $("#live").textContent = "LIVE · READ-ONLY"; onData(JSON.parse(e.data)); };
   es.onerror = () => { $("#live").classList.add("off"); $("#live").textContent = "DAEMON NOT RUNNING · RETRYING"; };
 }
+
+/* presence: the daemon only holds permission requests for you while an Arcanum tab is open and visible */
+const clientId = Math.random().toString(36).slice(2, 10);
+const beat = () => fetch("/api/presence", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ client: clientId, visible: document.visibilityState === "visible" }) }).catch(() => {});
+document.addEventListener("visibilitychange", beat); setInterval(beat, 15000); beat();
 
 /* animation clock + relative times */
 const logo = $("#logoSprite"); const drawLogo = fr => renderSprite(logo, 38, 54, 1.25, c => drawMage(c, "fable", "cast", fr));

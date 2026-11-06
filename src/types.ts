@@ -35,6 +35,8 @@ export interface Session {
   recent?: Exchange[];
   status?: string; reply?: "type" | "none"; seal?: boolean; unreachable?: boolean; promote?: boolean;
   mana?: Mana;
+  /** From hooks: answered through the hook (any terminal), what it asks, its pane, its cost. */
+  sealVia?: "hook" | "keys"; request?: string; link?: { cmuxSurface?: string; cmuxWorkspace?: string }; costUsd?: number;
 }
 
 export interface DismissedMage { id: string; name: string; realmId: string; at: number; alive: boolean }

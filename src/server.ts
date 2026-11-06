@@ -8,7 +8,7 @@ import type { Snapshot } from "./types";
 const TYPES: Record<string, string> = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".woff2": "font/woff2", ".woff": "font/woff", ".svg": "image/svg+xml", ".png": "image/png" };
 
 export interface PortalResult { ok: boolean; precision: "exact" | "app" | "none"; message: string }
-export interface ServerDeps { uploadsDir?: string; uiDir: string; fontDirs: string[]; arcanumDir: string; getSnapshot(): Snapshot; onConfigChange(): void; openPortal(sessionId: string): Promise<PortalResult | undefined>;
+export interface ServerDeps { presence?(client: string, visible: boolean): void; hookStatus?(): unknown; uploadsDir?: string; uiDir: string; fontDirs: string[]; arcanumDir: string; getSnapshot(): Snapshot; onConfigChange(): void; openPortal(sessionId: string): Promise<PortalResult | undefined>;
   sendWord?(sessionId: string, text: string, images: string[]): Promise<{ ok: boolean; message: string } | undefined>;
   answerSeal?(sessionId: string, decision: "grant" | "refuse"): Promise<{ ok: boolean; message: string } | undefined>;
   readSeal?(sessionId: string): Promise<{ request: string; question: string } | undefined>;
@@ -73,6 +73,13 @@ export function createArcanumServer(d: ServerDeps) {
       const r = await d.openPortal(pm[1]).catch(e => ({ ok: false, precision: "none" as const, message: (e as Error).message }));
       return r ? send(res, 200, r) : send(res, 404, { error: "No live mage with that id." });
     }
+    if (p === "/api/presence" && req.method === "POST") {
+      let body: any = {};
+      try { body = await readJson(req); } catch { /* ignore */ }
+      d.presence?.(String(body.client ?? "").slice(0, 40), body.visible === true);
+      return send(res, 200, { ok: true });
+    }
+    if (p === "/api/hooks" && req.method === "GET") return send(res, 200, d.hookStatus?.() ?? {});
     if (p === "/api/uploads" && req.method === "POST") {
       if (!d.uploadsDir) return send(res, 404, { error: "Uploads are off." });
       const chunks: Buffer[] = []; let size = 0, tooBig = false;

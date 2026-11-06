@@ -9,6 +9,10 @@ import { readPs } from "./procs";
 import { answerSeal, readSeal, sendWord, type SendCtx } from "./send";
 import { pruneUploads } from "./uploads";
 import { appTabTtys, applyReach, checkReach } from "./reach";
+import { createHookServer, describeRequest, HookStore } from "./hooks";
+import { applyIntel } from "./intel";
+import { hooksInstalled, statusScriptOf, STATUS_MARK } from "./install";
+import { mkdirSync, readFileSync } from "node:fs";
 import { dismiss, loadDismissed, restore } from "./dismissed";
 import { planResume, planSummon } from "./summon";
 import { readRegistry } from "./registry";
@@ -33,11 +37,17 @@ const sendCtx = async (s: { host: string }): Promise<SendCtx> => ({ ps: readPs()
 
 let snapshot: Snapshot = { generatedAt: Date.now(), realms: [], sessions: [] };
 let reach = new Map<string, boolean>();
+const hooks = new HookStore();
+// which dashboard tabs are open and visible: permission requests are only held for you while one is
+const seen = new Map<string, { visible: boolean; at: number }>();
+const dashboardVisible = () => [...seen.values()].some(v => v.visible && Date.now() - v.at < 45_000);
+let hookEvents: number[] = [];
 let lastKey = "";
 const rebuild = () => {
   try {
     snapshot = buildSnapshot({ claudeDir: CLAUDE_DIR, arcanumDir: ARCANUM_DIR, ps: readPs(), env: realEnv, hasCmux: !!cmux });
   } catch (e) { console.error("Couldn't read sessions:", (e as Error).message); return; }
+  applyIntel(snapshot.sessions, hooks);
   applyReach(snapshot.sessions, reach);
   const key = JSON.stringify({ ...snapshot, generatedAt: 0 });
   if (key !== lastKey) { lastKey = key; app.broadcast(snapshot); }
@@ -66,6 +76,13 @@ const app = createArcanumServer({ uploadsDir, uiDir: path.join(root, "ui"), font
   },
   async answerSeal(id, decision) {
     const s = live(id); if (!s) return undefined;
+    const held = hooks.pending.get(id);
+    if (held) {   // held by the hook: answer it directly, whatever the terminal
+      held.settle(decision);
+      const what = describeRequest(held.tool, held.input).split("\n")[0].slice(0, 100);
+      console.log(`seal → ${s.name}: ${decision} via hook`);
+      return { ok: true, message: `${decision === "grant" ? "Seal granted" : "Seal refused"} → ${s.name}: ${what}` };
+    }
     const r = await answerSeal(s, decision, await sendCtx(s));
     console.log(`seal → ${s.name}: ${decision} · ${r.ok ? "ok" : "refused"} · ${r.message}`);
     if (r.ok) schedule();
@@ -111,7 +128,16 @@ const app = createArcanumServer({ uploadsDir, uiDir: path.join(root, "ui"), font
     console.log(`summon → ${r.name} (${req.model}): ${out.ok ? "ok" : "failed"} · ${out.message}`);
     return { ok: out.ok, message: out.ok ? `${plan.message} It will appear here in a moment.` : out.message };
   },
-  async readSeal(id) { const s = live(id); return s ? readSeal(s, await sendCtx(s)) : undefined; },
+  presence(client, visible) { if (client) seen.set(client, { visible, at: Date.now() }); },
+  hookStatus() {
+    let installed = false, relay = false;
+    try { const st = JSON.parse(readFileSync(path.join(CLAUDE_DIR, "settings.json"), "utf8")); installed = hooksInstalled(st); const sc = statusScriptOf(st); relay = !!sc && readFileSync(sc, "utf8").includes(STATUS_MARK); } catch { /* unreadable */ }
+    hookEvents = hookEvents.filter(t => Date.now() - t < 600_000);
+    return { installed, relay, eventsLast10m: hookEvents.length, holding: dashboardVisible() };
+  },
+  async readSeal(id) {
+    const held = hooks.pending.get(id);
+    if (held) { const [request, ...rest] = describeRequest(held.tool, held.input).split("\n"); return { request: [request, ...rest].join("\n"), question: "Allow it?" }; } const s = live(id); return s ? readSeal(s, await sendCtx(s)) : undefined; },
 });
 
 // Watch the live registry, and the transcript of every live session (re-armed after each scan).
@@ -123,6 +149,9 @@ function syncTranscriptWatches() {
   for (const [p, w] of watchers) if (!want.has(p)) { w.close(); watchers.delete(p); }
   for (const p of want) arm(p);
 }
+
+mkdirSync(ARCANUM_DIR, { recursive: true });
+createHookServer(path.join(ARCANUM_DIR, "hooks.sock"), hooks, { onChange: () => { hookEvents.push(Date.now()); schedule(); }, dashboardVisible });
 
 rebuild();
 setInterval(rebuild, 5000); // liveness: processes can die without touching any file

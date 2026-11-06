@@ -43,3 +43,9 @@ test("cmux grid: faint suggestion text in the prompt is not a draft", () => {
   expect(parseScreen(text)).toEqual({ kind: "input", draft: "ls -la" });   // what plain text sees
   expect(parseScreen(solid)).toEqual({ kind: "input", draft: "" });        // what Arcanum uses
 });
+
+test("cmux grid: a live permission dialog is recognised (regression: words were padded apart)", () => {
+  const { text } = gridText(JSON.parse(fx("cmux-replay-permission.json")));
+  expect(parseScreen(text)).toMatchObject({ kind: "permission", question: "Do you want to proceed?", yes: "1", no: "3" });
+  expect(text).toContain("2. Yes, and always allow access to");
+});

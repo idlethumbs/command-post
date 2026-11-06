@@ -1,0 +1,15 @@
+#!/bin/bash
+# Arcanum hook relay. Claude Code runs this on session events; it forwards them to the local Arcanum daemon.
+# It prints nothing (so it never adds text to Claude's context), except Arcanum's answer to a held permission request.
+# If Arcanum isn't running, it exits at once.
+SOCK="${ARCANUM_DIR:-$HOME/.arcanum}/hooks.sock"
+[ -S "$SOCK" ] || exit 0
+payload=$(cat)
+ctx=$(printf '{"cmux_surface":"%s","cmux_workspace":"%s","tmux_pane":"%s"}' "${CMUX_SURFACE_ID:-}" "${CMUX_WORKSPACE_ID:-}" "${TMUX_PANE:-}")
+if [ "$1" = "PermissionRequest" ]; then
+  out=$(printf '%s' "$payload" | curl -s --max-time 115 --unix-socket "$SOCK" -H "x-arcanum-ctx: $ctx" -H 'content-type: application/json' --data-binary @- "http://arcanum/hook/PermissionRequest" 2>/dev/null)
+  [ -n "$out" ] && printf '%s' "$out"
+else
+  ( printf '%s' "$payload" | curl -s --max-time 2 --unix-socket "$SOCK" -H "x-arcanum-ctx: $ctx" -H 'content-type: application/json' --data-binary @- "http://arcanum/hook/${1:-Unknown}" >/dev/null 2>&1 & )
+fi
+exit 0

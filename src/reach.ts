@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { cmuxSurfaceFor, readCmuxLayout } from "./portal";
+import { readCmuxLayout, surfaceOf } from "./portal";
 import { hostTty } from "./procs";
 import type { ProcTable, Session } from "./types";
 
@@ -15,7 +15,7 @@ export async function checkReach(sessions: Session[], d: ReachDeps): Promise<Map
   const on = (h: string) => sessions.filter(s => s.host === h);
   if (on("cmux").length && d.cmuxBin) {
     const layout = await readCmuxLayout(d.cmuxBin);
-    for (const s of on("cmux")) out.set(s.id, !!layout && !!cmuxSurfaceFor(s.pid, layout, d.ps));
+    for (const s of on("cmux")) out.set(s.id, !!layout && !!surfaceOf(s, layout, d.ps));
   }
   for (const [host, app] of [["terminal", "Terminal"], ["iterm", "iTerm2"]] as const) {
     if (!on(host).length) continue;

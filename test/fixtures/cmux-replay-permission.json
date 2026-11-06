@@ -1,0 +1,296 @@
+{
+ "render_grid": {
+  "rows": 35,
+  "columns": 99,
+  "cursor": {
+   "blinking": true,
+   "column": 1,
+   "row": 28,
+   "style": "block",
+   "visible": false
+  },
+  "styles": [
+   {
+    "id": 0,
+    "faint": false
+   },
+   {
+    "id": 5,
+    "faint": false
+   },
+   {
+    "id": 6,
+    "faint": false
+   },
+   {
+    "id": 11,
+    "faint": false
+   },
+   {
+    "id": 12,
+    "faint": false
+   }
+  ],
+  "row_spans": [
+   {
+    "cell_width": 99,
+    "column": 0,
+    "row": 21,
+    "style_id": 11,
+    "text": "───────────────────────────────────────────────────────────────────────────────────────────────────"
+   },
+   {
+    "cell_width": 1,
+    "column": 0,
+    "row": 22,
+    "style_id": 0,
+    "text": " "
+   },
+   {
+    "cell_width": 12,
+    "column": 1,
+    "row": 22,
+    "style_id": 12,
+    "text": "Bash command"
+   },
+   {
+    "cell_width": 15,
+    "column": 2,
+    "row": 24,
+    "style_id": 0,
+    "text": " touch keys.txt"
+   },
+   {
+    "cell_width": 1,
+    "column": 2,
+    "row": 25,
+    "style_id": 0,
+    "text": " "
+   },
+   {
+    "cell_width": 12,
+    "column": 3,
+    "row": 25,
+    "style_id": 6,
+    "text": "Create empty"
+   },
+   {
+    "cell_width": 8,
+    "column": 16,
+    "row": 25,
+    "style_id": 6,
+    "text": "keys.txt"
+   },
+   {
+    "cell_width": 4,
+    "column": 25,
+    "row": 25,
+    "style_id": 6,
+    "text": "file"
+   },
+   {
+    "cell_width": 2,
+    "column": 1,
+    "row": 27,
+    "style_id": 0,
+    "text": "Do"
+   },
+   {
+    "cell_width": 3,
+    "column": 4,
+    "row": 27,
+    "style_id": 0,
+    "text": "you"
+   },
+   {
+    "cell_width": 4,
+    "column": 8,
+    "row": 27,
+    "style_id": 0,
+    "text": "want"
+   },
+   {
+    "cell_width": 2,
+    "column": 13,
+    "row": 27,
+    "style_id": 0,
+    "text": "to"
+   },
+   {
+    "cell_width": 8,
+    "column": 16,
+    "row": 27,
+    "style_id": 0,
+    "text": "proceed?"
+   },
+   {
+    "cell_width": 1,
+    "column": 1,
+    "row": 28,
+    "style_id": 11,
+    "text": "❯"
+   },
+   {
+    "cell_width": 2,
+    "column": 3,
+    "row": 28,
+    "style_id": 6,
+    "text": "1."
+   },
+   {
+    "cell_width": 3,
+    "column": 6,
+    "row": 28,
+    "style_id": 11,
+    "text": "Yes"
+   },
+   {
+    "cell_width": 2,
+    "column": 3,
+    "row": 29,
+    "style_id": 6,
+    "text": "2."
+   },
+   {
+    "cell_width": 4,
+    "column": 6,
+    "row": 29,
+    "style_id": 0,
+    "text": "Yes,"
+   },
+   {
+    "cell_width": 3,
+    "column": 11,
+    "row": 29,
+    "style_id": 0,
+    "text": "and"
+   },
+   {
+    "cell_width": 6,
+    "column": 15,
+    "row": 29,
+    "style_id": 0,
+    "text": "always"
+   },
+   {
+    "cell_width": 5,
+    "column": 22,
+    "row": 29,
+    "style_id": 0,
+    "text": "allow"
+   },
+   {
+    "cell_width": 6,
+    "column": 28,
+    "row": 29,
+    "style_id": 0,
+    "text": "access"
+   },
+   {
+    "cell_width": 2,
+    "column": 35,
+    "row": 29,
+    "style_id": 0,
+    "text": "to"
+   },
+   {
+    "cell_width": 61,
+    "column": 38,
+    "row": 29,
+    "style_id": 5,
+    "text": "/tmp/x"
+   },
+   {
+    "cell_width": 44,
+    "column": 6,
+    "row": 30,
+    "style_id": 5,
+    "text": "-4c39-a997-ddb20c58e6f1/scratchpad/hook-test"
+   },
+   {
+    "cell_width": 4,
+    "column": 51,
+    "row": 30,
+    "style_id": 0,
+    "text": "from"
+   },
+   {
+    "cell_width": 4,
+    "column": 56,
+    "row": 30,
+    "style_id": 0,
+    "text": "this"
+   },
+   {
+    "cell_width": 7,
+    "column": 61,
+    "row": 30,
+    "style_id": 0,
+    "text": "project"
+   },
+   {
+    "cell_width": 2,
+    "column": 3,
+    "row": 31,
+    "style_id": 6,
+    "text": "3."
+   },
+   {
+    "cell_width": 2,
+    "column": 6,
+    "row": 31,
+    "style_id": 0,
+    "text": "No"
+   },
+   {
+    "cell_width": 3,
+    "column": 1,
+    "row": 33,
+    "style_id": 6,
+    "text": "Esc"
+   },
+   {
+    "cell_width": 2,
+    "column": 5,
+    "row": 33,
+    "style_id": 6,
+    "text": "to"
+   },
+   {
+    "cell_width": 6,
+    "column": 8,
+    "row": 33,
+    "style_id": 6,
+    "text": "cancel"
+   },
+   {
+    "cell_width": 1,
+    "column": 15,
+    "row": 33,
+    "style_id": 6,
+    "text": "·"
+   },
+   {
+    "cell_width": 3,
+    "column": 17,
+    "row": 33,
+    "style_id": 6,
+    "text": "Tab"
+   },
+   {
+    "cell_width": 2,
+    "column": 21,
+    "row": 33,
+    "style_id": 6,
+    "text": "to"
+   },
+   {
+    "cell_width": 5,
+    "column": 24,
+    "row": 33,
+    "style_id": 6,
+    "text": "amend"
+   }
+  ]
+ }
+}

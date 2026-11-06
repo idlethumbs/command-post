@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { cmuxSurfaceFor, type CmuxLayout } from "./portal";
+import { surfaceOf, type CmuxLayout } from "./portal";
 import { hostTty } from "./procs";
 import type { ProcTable, Session } from "./types";
 
@@ -42,13 +42,13 @@ export function gridText(replay: any): { text: string; solid: string } {
   if (!g?.row_spans) return { text: "", solid: "" };
   const faint = new Set((g.styles ?? []).filter((s: any) => s.faint).map((s: any) => s.id));
   const rows = Math.max(g.rows ?? 0, ...g.row_spans.map((s: any) => s.row + 1));
-  const full: string[][] = Array.from({ length: rows }, () => []), sol: string[][] = Array.from({ length: rows }, () => []);
+  const full: string[] = Array(rows).fill(""), sol: string[] = Array(rows).fill("");
+  const put = (line: string, col: number, t: string) => line.padEnd(col, " ") + t;   // columns are character positions
   for (const s of [...g.row_spans].sort((a: any, b: any) => a.row - b.row || a.column - b.column)) {
-    const put = (line: string[], t: string) => { while (line.length < s.column) line.push(" "); line.push(t); };
-    put(full[s.row], s.text);
-    put(sol[s.row], faint.has(s.style_id) ? " ".repeat([...s.text].length) : s.text);
+    full[s.row] = put(full[s.row], s.column, s.text);
+    sol[s.row] = put(sol[s.row], s.column, faint.has(s.style_id) ? " ".repeat([...s.text].length) : s.text);
   }
-  return { text: full.map(l => l.join("")).join("\n"), solid: sol.map(l => l.join("")).join("\n") };
+  return { text: full.join("\n"), solid: sol.join("\n") };
 }
 
 /** Keep newlines and tabs; drop every other control character (no escape sequences reach the terminal). */
@@ -105,7 +105,7 @@ interface Target { read(): Promise<{ text: string; solid?: string }>; type(text:
 
 function targetFor(s: Session, ctx: SendCtx): Target | string {
   if (s.host === "cmux") {
-    const loc = ctx.cmux?.layout && cmuxSurfaceFor(s.pid, ctx.cmux.layout, ctx.ps);
+    const loc = ctx.cmux?.layout && surfaceOf(s, ctx.cmux.layout, ctx.ps);
     if (!ctx.cmux || !loc) return "Couldn't find its cmux pane.";
     const bin = ctx.cmux.bin, id = loc.surface;
     return {

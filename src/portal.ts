@@ -27,6 +27,12 @@ export function parseCmuxTop(tsv: string): CmuxLayout {
   return { surfaceOfPid, surfaces };
 }
 
+/** The session's cmux pane: the one SessionStart reported if cmux still knows it, else found by walking processes. */
+export function surfaceOf(s: Session, layout: CmuxLayout, ps: ProcTable) {
+  const hinted = s.link?.cmuxSurface && layout.surfaces.get(s.link.cmuxSurface.toUpperCase());
+  return hinted ? { surface: s.link!.cmuxSurface!.toUpperCase(), ...hinted } : cmuxSurfaceFor(s.pid, layout, ps);
+}
+
 export function cmuxSurfaceFor(pid: number, layout: CmuxLayout, ps: ProcTable) {
   let cur: number | undefined = pid;
   for (let i = 0; cur && cur > 1 && i < 25; i++) {
@@ -87,7 +93,7 @@ export function planPortal(s: Session, ctx: PortalCtx): PortalPlan {
   switch (s.host) {
     case "cmux": {
       if (!cm) return { precision: "none", steps: [], message: "cmux isn't installed where Arcanum expects it." };
-      const loc = cm.layout && cmuxSurfaceFor(s.pid, cm.layout, ctx.ps);
+      const loc = cm.layout && surfaceOf(s, cm.layout, ctx.ps);
       if (!loc) return { precision: "app", steps: [{ cmd: "open", args: ["-a", cm.app] }], message: "Raised cmux, but couldn't find the exact pane." };
       return {
         precision: "exact", message: `Opened ${s.name} in cmux.`, steps: [
