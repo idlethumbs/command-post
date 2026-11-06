@@ -12,5 +12,5 @@ Parked on 6 Nov 2026 by product. Pick up in any order.
 - **Browser smoke test.** A Playwright run against an isolated daemon (temp `ARCANUM_DIR`, `ARCANUM_PROJECTS_DIR`, port), covering map, realm, reply box, summon dialog and found dialog.
 - **Refresh the design spec.** `docs/specs/2026-11-04-arcanum-design.md` still describes the v1 soldier theme in places, and its milestones predate summon, departed, founding and mana.
 - **Rename the folder** `~/projects/command-post` to `~/projects/arcanum`. Memory notes and the README path need updating with it.
-- **Terminal and iTerm limits:** one-line replies, no images, and no Grant/Refuse without hooks. Grey suggestion text can't be told from a draft there.
-- **Mana window size is inferred** (200k vs 1M) and cost isn't shown. Both become exact with the status line relay (see the hooks proposal).
+- **Terminal and iTerm limits:** one-line replies and no images. Grey suggestion text can't be told from a draft there. (Grant/Refuse now works through hooks.)
+- **Counsel vs done** is still read from Claude's wording. Hooks made the timing exact, not the intent.

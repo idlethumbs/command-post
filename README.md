@@ -87,6 +87,19 @@ The first time a portal uses AppleScript, macOS asks you to allow your terminal 
 - The map's sea glints and cloud shadows drift.
 - **Grimoire** (sidebar) holds the settings: **chiptune sounds**, off by default and synthesised in the browser with no audio files; **volume**; **motion**, which follows macOS by default, or Full / Calm; and **Preview a raven**.
 
+## Claude Code hooks (installed 6 Nov 2026)
+
+`pnpm hooks plan | install | uninstall | status`. Install adds a `hooks` block to `~/.claude/settings.json` and one marked line to your status line script, keeping timestamped backups of both. Uninstall removes exactly those additions.
+
+| Source | What Arcanum gets |
+|---|---|
+| `SessionStart` | The exact cmux pane a session lives in |
+| `UserPromptSubmit`, `Stop` | Exact, instant turn timing: ravens arrive the moment Claude finishes |
+| `PermissionRequest` | While an Arcanum tab is open and visible, the request is **held for you** (up to ~2 min) and Grant/Refuse works for **any** terminal. With no visible tab, it passes straight to the terminal's own prompt. |
+| Status line relay | Exact mana (context % and window size) and cost per mage and per realm, including sessions that were already running |
+
+The relay (`~/.arcanum/bin/hook`) prints nothing, except Arcanum's answer to a held request, so it never adds text to Claude's context. It exits at once when Arcanum isn't running. The hook socket `~/.arcanum/hooks.sock` is only openable by your user.
+
 ## Develop
 
 ```sh
