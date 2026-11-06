@@ -450,12 +450,22 @@ function openModal(html, wire) {
 }
 async function dismissMage(id) {
   const s = data.sessions.find(x => x.id === id); if (!s) return;
-  const ok = await openModal(`<h3 id="modalTitle">Dismiss ${esc(s.name)}?</h3>
-    <p>It leaves Arcanum's map, realm and ravens for good. <b>The session itself is not closed</b>: it keeps running in ${esc(s.where)}.</p>
+  // only a cmux pane Arcanum can find can be closed; unticked every time, since closing ends the session
+  const canClose = s.host === "cmux" && s.portal === "exact" && !s.unreachable;
+  const res = await openModal(`<h3 id="modalTitle">Dismiss ${esc(s.name)}?</h3>
+    <p>It leaves Arcanum's map, realm and ravens for good. <span id="dmKeep"><b>The session itself is not closed</b>: it keeps running in ${esc(s.where)}.</span></p>
+    ${canClose ? `<label class="check"><input type="checkbox" id="dmClose"> Also close its cmux tab <span style="color:var(--muted)">(ends the session; other tabs in that workspace stay)</span></label>
+    ${s.state === "cast" ? `<p id="dmCasting" hidden><b>It's casting right now:</b> closing stops it mid-turn.</p>` : ""}` : ""}
     <p>Changed your mind later? Restore it from <b>Dismissed mages</b> in the sidebar.</p>
-    <div class="btns"><button class="btn alt" value="cancel">Keep it</button><button class="btn deny" value="ok" autofocus>Dismiss</button></div>`);
-  if (!ok) return;
-  const r = await post(`/api/sessions/${encodeURIComponent(id)}/dismiss`, {});
+    <div class="btns"><button class="btn alt" value="cancel">Keep it</button><button class="btn deny" value="ok" id="dmGo" autofocus>Dismiss</button></div>`, {
+    init() {
+      const box = $("#dmClose"); if (!box) return;
+      box.onchange = () => { $("#dmGo").textContent = box.checked ? "Dismiss and close" : "Dismiss"; $("#dmKeep").hidden = box.checked; if ($("#dmCasting")) $("#dmCasting").hidden = !box.checked; };
+    },
+    collect: () => ({ close: !!$("#dmClose")?.checked }),
+  });
+  if (!res) return;
+  const r = await post(`/api/sessions/${encodeURIComponent(id)}/dismiss`, res);
   toast(r.message ?? r.error);
 }
 document.addEventListener("click", e => {

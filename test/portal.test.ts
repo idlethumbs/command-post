@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { cmuxSurfaceFor, parseCmuxTop, planPortal, type PortalCtx } from "../src/portal";
+import { cmuxSurfaceFor, parseCmuxTop, planClose, planPortal, type PortalCtx } from "../src/portal";
 import type { ProcTable, Session } from "../src/types";
 
 const tsv = readFileSync(path.join(__dirname, "fixtures", "cmux-top.tsv"), "utf8");
@@ -74,4 +74,12 @@ test("unknown hosts explain themselves", () => {
   const p = planPortal({ ...base, host: "unknown", where: "Unknown terminal" }, ctx);
   expect(p.precision).toBe("none");
   expect(p.message).toMatch(/couldn't tell which terminal/i);
+});
+
+test("close: only the mage's own cmux tab, named exactly, never the focused one by default", () => {
+  expect(planClose(base, ctx)).toEqual({ step: { cmd: "/bin/cmux", args: ["close-surface", "--surface", "S-3", "--workspace", "WS-2"] } });
+  expect(planClose({ ...base, pid: 4681 }, ctx)).toEqual({ error: "Couldn't find agent-rails-e4's cmux tab, so nothing was closed or dismissed." });
+  expect(planClose({ ...base, host: "terminal", where: "Terminal" }, ctx)).toEqual({ error: "Only cmux sessions can be closed from Arcanum." });
+  expect(planClose(base, { ps })).toEqual({ error: "Only cmux sessions can be closed from Arcanum." });
+  expect(planClose(base, { ps, cmux: { bin: "/bin/cmux", app: "/Apps/cmux.app" } })).toMatchObject({ error: expect.stringMatching(/Couldn't find/) });
 });

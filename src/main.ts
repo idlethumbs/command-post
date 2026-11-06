@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ARCANUM_DIR, CLAUDE_DIR, PORT } from "./paths";
-import { findCmux, planPortal, readCmuxLayout, runPortal } from "./portal";
+import { findCmux, planClose, planPortal, readCmuxLayout, run, runPortal } from "./portal";
 import { readPs } from "./procs";
 import { answerSeal, readSeal, sendWord, type SendCtx } from "./send";
 import { pruneUploads } from "./uploads";
@@ -88,9 +88,19 @@ const app = createArcanumServer({ uploadsDir, uiDir: path.join(root, "ui"), font
     if (r.ok) schedule();
     return r;
   },
-  dismiss(id) {
+  async dismiss(id, { close }) {
     const s = live(id), dep = snapshot.departed?.find(x => x.id === id);
     if (!s && !dep) return undefined;
+    if (close) {
+      if (!s) return { ok: false, message: `${dep!.name} has already ended; there's nothing to close.` };
+      // find the tab fresh at click time, and only dismiss once it has really closed
+      const plan = planClose(s, { ps: readPs(), cmux: cmux && { ...cmux, layout: s.host === "cmux" ? await readCmuxLayout(cmux.bin) : undefined } });
+      if ("error" in plan) return { ok: false, message: plan.error };
+      try { await run(plan.step); } catch (e) { return { ok: false, message: `Couldn't close ${s.name}'s cmux tab, so it wasn't dismissed. ${(e as Error).message.split("\n")[0]}` }; }
+      dismiss(ARCANUM_DIR, s); schedule();
+      console.log(`dismiss → ${s.name}: closed its cmux tab`);
+      return { ok: true, message: `${s.name} dismissed and its cmux tab closed. Its conversation is saved; restore it from Dismissed mages to resume it.` };
+    }
     dismiss(ARCANUM_DIR, (s ?? dep)!); schedule();
     return { ok: true, message: s ? `${s.name} dismissed. It keeps running in ${s.where}; restore it from Dismissed mages.` : `${dep!.name} dismissed. Restore it from Dismissed mages.` };
   },
