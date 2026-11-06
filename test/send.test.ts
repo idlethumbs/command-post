@@ -49,3 +49,8 @@ test("cmux grid: a live permission dialog is recognised (regression: words were 
   expect(parseScreen(text)).toMatchObject({ kind: "permission", question: "Do you want to proceed?", yes: "1", no: "3" });
   expect(text).toContain("2. Yes, and always allow access to");
 });
+
+test("a prompt in ! shell mode isn't a Claude prompt, so nothing is typed", () => {
+  const R = "─".repeat(40);
+  expect(parseScreen(`${R}\n! ls -la\n${R}\n  ! for bash mode`).kind).toBe("unknown");
+});

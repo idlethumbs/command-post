@@ -155,7 +155,8 @@ export async function sendWord(s: Session, raw: string, ctx: SendCtx, images: st
   if (!text && !images.length) return { ok: false, message: "Write something first." };
   if (images.length && s.host !== "cmux") return { ok: false, message: "Images can only be sent to cmux sessions so far. Open the portal and paste it there." };
   if (images.some(p => /\s/.test(p))) return { ok: false, message: "Image paths can't contain spaces." };
-  if (s.status === "shell") return { ok: false, message: `${s.name} is in shell mode (!). Open the portal to finish there first.` };
+  // registry "shell" means Claude is running a shell command (a kind of busy), not that you're in ! mode:
+  // your word queues like any busy turn. Real ! mode shows "!" instead of "❯", which the screen check below refuses.
   if (s.state === "seal") return { ok: false, message: `${s.name} is waiting on a permission prompt. Grant or refuse it first.` };
   if (s.waitingFor) return { ok: false, message: `${s.name} is showing a question dialog. Open the portal to pick an answer.` };
   if (text.includes("\n") && s.host !== "cmux") return { ok: false, message: "Multi-line replies only work for cmux sessions so far. Send it as one line, or open the portal." };
