@@ -11,6 +11,16 @@ pnpm install
 pnpm start          # http://127.0.0.1:7337  (add -- --open to open a browser)
 ```
 
+### From the Dock
+
+```sh
+pnpm app install    # writes ~/Applications/Arcanum.app; drag it to the Dock
+```
+
+Clicking **Arcanum** starts the daemon if it isn't running, then brings its window forward, or opens one if none is open. The window is a chromeless Brave/Chrome/Edge window (`--app=`), or a normal tab if none of those is installed. Nothing starts at login. The daemon keeps running after you close the window, so the next click is instant. Its log is `~/.arcanum/daemon.log`.
+
+`pnpm app stop` puts it to sleep, and `pnpm app uninstall` removes the app. Run `pnpm app install` again after moving the repo or switching Node versions, because the app records both paths. The first time you click it while an Arcanum window is open, macOS asks whether Arcanum may control your browser. Allow it so the app can bring that window forward; if you refuse, each click opens a new window.
+
 Drag to pan, scroll or pinch to zoom, `0` to fit all realms, `←`/`→` + `⏎` to fast-travel, `N` for the next mage waiting on you, `⌘K` to search.
 
 ## What it reads, and what it writes

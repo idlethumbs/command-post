@@ -3,7 +3,7 @@
 Parked on 6 Nov 2026 by product. Pick up in any order.
 
 ## Product
-- **Always on, with nudges.** Start the daemon at login (a launchd agent); macOS notifications when a raven arrives and Arcanum isn't focused, where clicking one opens that mage; a waiting count on the tab title and Dock icon.
+- **Nudges.** Not always on: product rejected starting at login (6 Nov) and chose a Dock launcher instead (`pnpm app install`, done). Still open: macOS notifications while Arcanum is running but not focused, where clicking one opens that mage; a waiting count on the tab title.
 - **Triage.** Order requests by blocking vs FYI and by age instead of time only: seals and old questions rise, "done, here's a summary" sinks.
 - **Departed window.** It's 3 days for now. Make it configurable in the Grimoire if it ever feels wrong.
 
