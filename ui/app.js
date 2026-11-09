@@ -180,7 +180,7 @@ function renderRealm(entering) {
   document.documentElement.style.setProperty("--portrait-bg", `linear-gradient(180deg, ${B.sky[0]}, ${B.sky[1]} 62%, ${B.ramp[3]} 62%, ${B.ramp[1]})`);
   $("#view").innerHTML = `<div class="realm${entering ? " in" : ""}">
     <div class="realm-top"><button class="btn ghost" id="back">◀ World map</button><h2 style="color:${tint(r.banner, .15)}">${esc(r.name)}</h2>
-      <span class="meta">${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}${dep.length ? ` · ${dep.length} departed` : ""}${t.some(x => x.costUsd !== undefined) ? ` · ${usd(t.reduce((a, x) => a + (x.costUsd ?? 0), 0))} spent by live mages` : ""}</span>
+      <span class="meta" id="realmMeta">${realmMeta(r, t, dep)}</span>
       <div class="right"><span class="meta"><kbd>↑</kbd><kbd>↓</kbd> mage · <kbd>R</kbd> reply · <kbd>P</kbd> portal · <kbd>esc</kbd> map</span>
       ${r.lands.length ? `<button class="btn" id="summonHere">✧ Summon a mage</button>` : ""}
       ${r.id === "wilds" ? "" : `<button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button>`}</div></div>
@@ -196,46 +196,56 @@ function renderRealm(entering) {
   const sc = $("#scene"), bd = buildBackdrop(Math.max(40, Math.round(sc.clientWidth / 3)), 100, biome);
   bd.className = "backdrop"; bd.setAttribute("aria-hidden", "true"); sc.prepend(bd);
   const lm = makeLandmark(r.landmark, r.banner, 2, 2); lm.className = "landmark"; sc.insertBefore(lm, $("#troupe"));
+  buildTroupe(t, dep);
+  const ci = $("#circle");
+  if (ci) { ci.innerHTML = ci.__html = circleHtml(t, dep); ci.onclick = e => { const b = e.target.closest(".crow"); if (b) { ui.session = b.dataset.session; renderRealm(); } }; }
+  if (ui.charter) renderCharter(r);
+  if (cur) renderComms(cur); else if (curDep) renderDeparted(curDep);
+  renderSide();
+  realmShape = shapeOf(r, t, dep);
+}
+
+const realmMeta = (r, t, dep) => `${r.lands.length || "no"} ${r.lands.length === 1 ? "land" : "lands"} · ${t.length} ${t.length === 1 ? "mage" : "mages"}${dep.length ? ` · ${dep.length} departed` : ""}${t.some(x => x.costUsd !== undefined) ? ` · ${usd(t.reduce((a, x) => a + (x.costUsd ?? 0), 0))} spent by live mages` : ""}`;
+function buildTroupe(t, dep) {
+  const tr = $("#troupe"); if (!tr) return;
+  tr.__key = JSON.stringify([t.map(s => [s.id, s.state, s.model, s.mana?.pct, s.name]), dep.map(d => [d.id, d.mana?.pct]), ui.session]);
+  tr.innerHTML = "";
   for (const s of t) {
     const b = document.createElement("button"); b.className = "mage" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
     b.appendChild(makeMage(s, 2, `${RANK[s.model].title} ${s.name}: ${STATE[s.state].label}`));
     b.insertAdjacentHTML("afterbegin", `<span class="bubble ${STATE[s.state].cls}">${STATE[s.state].glyph}</span>`);
     b.insertAdjacentHTML("beforeend", `<span class="name">${esc(s.name)}</span>${manaBar(s.mana)}`);
-    b.onclick = () => { ui.session = s.id; renderRealm(); };
-    $("#troupe").appendChild(b);
+    tr.appendChild(b);
   }
   for (const d of dep) {
     const b = document.createElement("button"); b.className = "mage departed" + (d.id === ui.session ? " sel" : ""); b.dataset.session = d.id;
     b.appendChild(makeMage({ id: d.id, model: d.model, state: "rest" }, 2, `${RANK[d.model].title} ${d.name}: departed`));
     b.insertAdjacentHTML("afterbegin", `<span class="bubble ended">☾</span>`);
     b.insertAdjacentHTML("beforeend", `<span class="name">${esc(d.name)}</span>${manaBar(d.mana)}`);
-    b.onclick = () => { ui.session = d.id; renderRealm(); };
-    $("#troupe").appendChild(b);
+    tr.appendChild(b);
   }
-  const ci = $("#circle");
-  if (ci) for (const s of t) {
-    const w = document.createElement("div"); w.className = "crowwrap";
-    const b = document.createElement("button"); b.className = "crow" + (s.id === ui.session ? " sel" : ""); b.dataset.session = s.id;
-    b.innerHTML = `<span><span class="cs">${esc(s.name)}</span><span class="rk">${RANK[s.model].title} · ${ago(s.since)}</span>${manaBar(s.mana)}</span><span class="chip ${STATE[s.state].cls}">${STATE[s.state].chip}</span>`;
-    b.onclick = () => { ui.session = s.id; renderRealm(); };
-    w.appendChild(b);
-    w.insertAdjacentHTML("beforeend", `<button class="x" data-dismiss="${esc(s.id)}" aria-label="Dismiss ${esc(s.name)}" title="Dismiss from Arcanum">×</button>`);
-    ci.appendChild(w);
-  }
-  if (ci && dep.length) {
-    ci.insertAdjacentHTML("beforeend", `<span class="lbl sub">Departed · ${dep.length} <span style="text-transform:none;letter-spacing:0">(last 3 days)</span></span>`);
-    for (const d of dep) {
-      const w = document.createElement("div"); w.className = "crowwrap departed";
-      const b = document.createElement("button"); b.className = "crow" + (d.id === ui.session ? " sel" : ""); b.dataset.session = d.id;
-      b.innerHTML = `<span><span class="cs">${esc(d.name)}</span><span class="rk">${RANK[d.model].title} · ended ${ago(d.endedAt)} ago</span></span><span class="chip ended">ENDED</span>`;
-      b.onclick = () => { ui.session = d.id; renderRealm(); };
-      w.appendChild(b);
-      w.insertAdjacentHTML("beforeend", `<button class="x" data-dismiss="${esc(d.id)}" aria-label="Dismiss ${esc(d.name)}" title="Dismiss from Arcanum">×</button>`);
-      ci.appendChild(w);
-    }
-  }
-  if (ui.charter) renderCharter(r);
-  if (cur) renderComms(cur); else if (curDep) renderDeparted(curDep);
+  tr.onclick = e => { const b = e.target.closest(".mage"); if (b) { ui.session = b.dataset.session; renderRealm(); } };
+}
+const circleHtml = (t, dep) => t.map(s => `<div class="crowwrap"><button class="crow${s.id === ui.session ? " sel" : ""}" data-session="${esc(s.id)}"><span><span class="cs">${esc(s.name)}</span><span class="rk">${RANK[s.model].title} · ${ago(s.since)}</span>${manaBar(s.mana)}</span><span class="chip ${STATE[s.state].cls}">${STATE[s.state].chip}</span></button><button class="x" data-dismiss="${esc(s.id)}" aria-label="Dismiss ${esc(s.name)}" title="Dismiss from Arcanum">×</button></div>`).join("")
+  + (dep.length ? `<span class="lbl sub">Departed · ${dep.length} <span style="text-transform:none;letter-spacing:0">(last 3 days)</span></span>` + dep.map(d => `<div class="crowwrap departed"><button class="crow${d.id === ui.session ? " sel" : ""}" data-session="${esc(d.id)}"><span><span class="cs">${esc(d.name)}</span><span class="rk">${RANK[d.model].title} · ended ${ago(d.endedAt)} ago</span></span><span class="chip ended">ENDED</span></button><button class="x" data-dismiss="${esc(d.id)}" aria-label="Dismiss ${esc(d.name)}" title="Dismiss from Arcanum">×</button></div>`).join("") : "");
+
+/* Live updates: rebuild the realm only when its shape changes (realm, mages arriving or leaving, the selection, the charter).
+   Otherwise patch just the parts whose content changed, so reading, typing and open sections are left alone. */
+let realmShape = "";
+const shapeOf = (r, t, dep) => JSON.stringify([r.id, r.name, r.banner, r.landmark, r.lands.length, ui.charter, ui.session, t.map(s => s.id).sort(), dep.map(d => d.id).sort()]);
+function refreshRealm() {
+  const r = realmOf(ui.realm);
+  if (!r || !$("#view .realm")) return renderRealm();
+  const t = troopsOf(r.id).sort(byNeed), dep = departedOf(r.id);
+  if (!t.some(s => s.id === ui.session) && !dep.some(d => d.id === ui.session)) return renderRealm();
+  if (shapeOf(r, t, dep) !== realmShape) return renderRealm();
+  const meta = $("#realmMeta"), m = realmMeta(r, t, dep); if (meta && meta.innerHTML !== m) meta.innerHTML = m;
+  const tr = $("#troupe"), tk = JSON.stringify([t.map(s => [s.id, s.state, s.model, s.mana?.pct, s.name]), dep.map(d => [d.id, d.mana?.pct]), ui.session]);
+  if (tr && tr.__key !== tk) buildTroupe(t, dep);
+  const ci = $("#circle"), ch = circleHtml(t, dep); if (ci && ci.__html !== ch) ci.innerHTML = ci.__html = ch;
+  const cur = t.find(s => s.id === ui.session), curDep = !cur && dep.find(d => d.id === ui.session);
+  if (cur) { markSeen(cur); renderComms(cur); }
+  else if (curDep) { const c = $("#comms"), k = JSON.stringify(curDep); if (c && c.__dep !== k) renderDeparted(curDep); }
   renderSide();
 }
 function portalButton(s) {
@@ -288,8 +298,7 @@ const refit = new ResizeObserver(() => requestAnimationFrame(fitMissive));
 function watchPanel() {
   refit.disconnect();
   const c = $("#comms"); if (!c) return;
-  for (const el of c.children) if (!el.classList.contains("xmit")) refit.observe(el);
-  refit.observe(c.querySelector(".dossier") ?? c);
+  for (const p of c.children) for (const el of p.dataset.part ? p.children : [p]) if (!el.classList.contains("xmit")) refit.observe(el);
 }
 function wireExchange() {
   const d = $("#exchange"), ex = $("#exlist");
@@ -382,7 +391,7 @@ async function post(url, body) {
   catch { return { ok: false, message: "The Arcanum daemon isn't answering." }; }
 }
 function wireComms(s) {
-  wireExchange();
+  const now = () => data.sessions.find(x => x.id === s.id) ?? s;
   const f = $("#orders");
   if (f) {
     const ta = $("#reply");
@@ -396,7 +405,7 @@ function wireComms(s) {
     f.ondrop = e => { f.classList.remove("dropping"); const fl = imagesIn(e.dataTransfer); if (fl.length) { e.preventDefault(); addImages(s, fl); } };
     refreshHint(s, ta);
     ta.onkeydown = e => {
-      if (e.key === "Tab" && !e.shiftKey && !ta.value && hints[s.id] && s.state !== "cast") { e.preventDefault(); ta.value = hints[s.id]; drafts[s.id] = ta.value; return; }
+      if (e.key === "Tab" && !e.shiftKey && !ta.value && hints[s.id] && now().state !== "cast") { e.preventDefault(); ta.value = hints[s.id]; drafts[s.id] = ta.value; return; }
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); f.requestSubmit(); }
     };
     f.onsubmit = async e => {
@@ -408,7 +417,7 @@ function wireComms(s) {
       const r = await post(`/api/sessions/${encodeURIComponent(s.id)}/send`, { text, images: imgs.map(p => p.id) });
       toast(r.message ?? r.error);
       if (r.ok) { burst(document.querySelector(`.mage[data-session="${CSS.escape(s.id)}"] canvas`), "word"); cue.word(); }
-      if (r.ok) { delete drafts[s.id]; hints[s.id] = null; hintAt[s.id] = 0; ta.placeholder = replyPlaceholder(s); ta.value = ""; imgs.forEach(p => URL.revokeObjectURL(p.url)); delete pics[s.id]; renderAttach(s); }
+      if (r.ok) { delete drafts[s.id]; hints[s.id] = null; hintAt[s.id] = 0; ta.placeholder = replyPlaceholder(now()); ta.value = ""; imgs.forEach(p => URL.revokeObjectURL(p.url)); delete pics[s.id]; renderAttach(s); }
       btn.disabled = false; btn.textContent = "Send word";
     };
   }
@@ -428,12 +437,13 @@ function wireComms(s) {
 }
 
 function renderDeparted(d) {
+  $("#comms").dataset.mage = ""; $("#comms").__dep = JSON.stringify(d);
   $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait" style="opacity:.6;filter:grayscale(.6)"></div><div>
       <h3>${esc(d.name)}<span class="actions">${d.promote ? `<button class="btn small" data-promote="${esc(d.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(d.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[d.model].title} · ${esc(prettyModel(d.modelId) ?? RANK[d.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ended">DEPARTED</span> ended ${ago(d.endedAt)} ago</dd>
       ${manaRow(d.mana)}
-      <dt>FOLDER</dt><dd class="crumb">${esc(home(d.cwd))}${d.branch ? ` · ${esc(d.branch)}` : ""}</dd></dl></div></div>
+      <dt>FOLDER</dt><dd class="crumb">${crumb(d)}</dd></dl></div></div>
     ${questLine(d)}
     <div class="paper xmit"><span class="lbl">Its last missive</span>${missive(d.lastText)}</div>
     ${exchangeBlock(d)}
@@ -461,23 +471,39 @@ function renderDeparted(d) {
   };
 }
 
+/* The selected mage's panel is drawn in parts. A live update replaces only the parts whose content changed,
+   so the missive you're reading, the reply you're typing and an open exchange are left alone. */
+/* folder in its realm's banner colour, branch in the footer's lilac, so where a mage works stands out */
+const crumb = m => { const b = realmOf(m.realmId)?.banner; return `<span class="dir"${b ? ` style="color:${tint(b, .15)}"` : ""}>${esc(home(m.cwd))}</span>${m.branch ? ` · <span class="br">${esc(m.branch)}</span>` : ""}`; };
+function part(c, name, html, wire, key = html) {
+  let el = c.querySelector(`:scope > [data-part="${name}"]`);
+  if (!el) { el = document.createElement("div"); el.dataset.part = name; el.style.display = "contents"; c.appendChild(el); }
+  if (el.__key === key) return false;
+  el.__key = key; el.innerHTML = html; wire?.(el); return true;
+}
 function renderComms(s) {
+  const c = $("#comms"); if (!c) return;
+  if (c.dataset.mage !== s.id) { c.innerHTML = ""; c.dataset.mage = s.id; }
   const st = STATE[s.state];
-  $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
+  part(c, "dossier", `<div class="dossier"><div class="portrait"></div><div>
       <h3>${esc(s.name)}${footer(s)}<span class="actions">${s.promote ? `<button class="btn small" data-promote="${esc(s.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
       ${manaRow(s.mana, s.costUsd)}
       <dt>DWELLS IN</dt><dd>${esc(s.where)}${s.unreachable ? ` <span class="chip rest" title="${s.blocked ? "cmux refused Arcanum's connection" : "Its pane or tab couldn't be found"}">UNREACHABLE</span>` : ""}</dd>
-      <dt>FOLDER</dt><dd class="crumb">${esc(home(s.cwd))}${s.branch ? ` · ${esc(s.branch)}` : ""}</dd></dl></div></div>
-    ${s.note ? `<div class="via">${esc(s.note)}</div>` : ""}
-    ${questLine(s)}
-    <div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${missive(s.lastText)}</div>
-    ${exchangeBlock(s)}
-    ${s.state === "seal" ? sealBlock(s) : wordBlock(s)}`;
-  $("#portrait").appendChild(makeMage(s, 1, `${RANK[s.model].title} ${s.name}`));
-  wireComms(s);
+      <dt>FOLDER</dt><dd class="crumb">${crumb(s)}</dd></dl></div></div>`,
+    el => el.querySelector(".portrait").appendChild(makeMage(s, 1, `${RANK[s.model].title} ${s.name}`)));
+  part(c, "note", s.note ? `<div class="via">${esc(s.note)}</div>` : "");
+  part(c, "quest", questLine(s));
+  const xs = c.querySelector(".xmit")?.scrollTop, es = $("#exlist")?.scrollTop;
+  const newX = part(c, "xmit", `<div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${missive(s.lastText)}</div>`);
+  const newE = part(c, "exchange", exchangeBlock(s), wireExchange);
+  const orders = s.state === "seal" ? sealBlock(s) : wordBlock(s);
+  if (!part(c, "orders", orders, () => wireComms(s), orders.replace(/ placeholder="[^"]*"/, ""))) { const ta = $("#reply"); if (ta) ta.placeholder = replyPlaceholder(s); }
   fitMissive(); watchPanel();
+  // a replaced missive or exchange list keeps your place in it
+  if (newX && xs !== undefined) c.querySelector(".xmit").scrollTop = xs;
+  if (newE && es !== undefined && $("#exlist")) $("#exlist").scrollTop = es;
 }
 
 /* ---------------- charter: edits go to ~/.arcanum/realms.json via the daemon ---------------- */
@@ -769,15 +795,13 @@ function onData(next) {
     if (document.activeElement?.id === "rname" || document.activeElement?.id === "resumeText") return renderSide();
     const typing = document.activeElement?.id === "reply" && document.activeElement;
     const caret = typing && { a: typing.selectionStart, b: typing.selectionEnd, dir: typing.selectionDirection, top: typing.scrollTop };
-    // keep where you were reading: the missive and the exchange list scroll on their own, and a rebuild would reset them
-    const was = ui.session, sc = $("#view").scrollTop, xs = document.querySelector("#comms .xmit")?.scrollTop, es = $("#exlist")?.scrollTop;
-    renderRealm(); $("#view").scrollTop = sc;
-    if (ui.session === was) {
-      const x = document.querySelector("#comms .xmit"), e = $("#exlist");
-      if (x && xs !== undefined) x.scrollTop = xs;
-      if (e && es !== undefined) e.scrollTop = es;
-    }
-    if (typing) { const t = $("#reply"); if (t) { t.focus(); t.setSelectionRange(caret.a, caret.b, caret.dir); t.scrollTop = caret.top; } }   // keep the cursor where you left it
+    const sc = $("#view").scrollTop, was = ui.session, x0 = document.querySelector("#comms .xmit"), xs = x0?.scrollTop, e0 = $("#exlist"), es = e0?.scrollTop;
+    refreshRealm(); $("#view").scrollTop = sc;
+    // a full rebuild (a mage arriving, say) still keeps your place in the missive and the exchange
+    const x1 = document.querySelector("#comms .xmit"), e1 = $("#exlist");
+    if (ui.session === was) { if (x1 && x1 !== x0 && xs !== undefined) x1.scrollTop = xs; if (e1 && e1 !== e0 && es !== undefined) e1.scrollTop = es; }
+    // only a rebuild replaces the reply box; then put the cursor back where you left it
+    const t = $("#reply"); if (typing && t && t !== typing) { t.focus(); t.setSelectionRange(caret.a, caret.b, caret.dir); t.scrollTop = caret.top; }
     playEvents(ev);
   }
 }

@@ -159,6 +159,7 @@
   .orders textarea[disabled] { opacity: .6; }
   .paper ul { margin: 0 0 .6em; padding-left: 1.2em; } .paper h4 { margin: .4em 0 .3em; font-size: 16px; }
   .crumb { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--muted); word-break: break-all; }
+  .crumb .dir { color: var(--parch); } .crumb .br { color: #d7afff; font-weight: 700; }
   .legend {
     left: 14px; bottom: 14px; display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 10px; border-radius: 3px; font-size: 13px;
     background: rgba(15,12,30,.8); color: var(--muted); max-width: calc(100% - 28px);
