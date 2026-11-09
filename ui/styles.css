@@ -297,19 +297,21 @@
   .raven .msg { font-family: var(--f-write); font-size: 15px; line-height: 1.35; }
 
   /* recent exchange: your words and the mage's replies, dark so it reads as history, not the current missive */
-  .exchange { background: #120f24; border-radius: 4px; box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--frame); padding: 10px 12px; }
-  .exchange { padding: 8px 12px; }
-  .exchange > summary { display: flex; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; }
+  .exchange { background: #120f24; border-radius: 4px; box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--frame); padding: 8px 12px; }
+  .exchange > summary { display: flex; align-items: baseline; gap: 10px; cursor: pointer; list-style: none; min-width: 0; }
   .exchange > summary::-webkit-details-marker { display: none; }
-  .exchange > summary > span:first-child::before { content: "▸ "; } .exchange[open] > summary > span:first-child::before { content: "▾ "; }
-  .exchange[open] > summary { margin-bottom: 6px; }
+  .exchange > summary .last { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--f-write); font-size: 15px; color: #ddd4bc; }
+  .exchange > summary .at { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .exchange > summary .more { white-space: nowrap; color: var(--gold); }
+  .exchange > summary .more::after { content: "expand ▸"; } .exchange[open] > summary .more::after { content: "collapse ▾"; }
+  .exchange[open] > summary { margin-bottom: 8px; }
+  .exchange > summary .whole, .exchange[open] > summary .said { display: none; }
+  .exchange[open] > summary .whole { display: inline; flex: 1; }
+  .exchange[open] > summary .last, .exchange[open] > summary .at { display: none; }
+  .exchange > summary:hover .more { color: var(--parch); }
   .exchange > summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .quest { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 15px; line-height: 1.4; color: var(--muted); }
   .quest b { color: var(--parch); font-weight: 600; } .quest .sep { color: var(--muted); }
-  .suggest { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 6px 10px; border-radius: 4px; border: 1px dashed var(--frame); color: var(--muted); }
-  .suggest[hidden] { display: none; }
-  .suggest:hover, .suggest:focus-visible { border-color: var(--gold); color: var(--parch); }
-  .suggest .tx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--f-write); font-size: 16px; }
   .exlist { list-style: none; margin: 0; padding: 0 4px 0 0; display: grid; gap: 6px; max-height: 220px; overflow-y: auto; font-family: var(--f-write); font-size: 15px; line-height: 1.4; }
   .exlist li { display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; align-items: baseline; padding: 5px 8px; border-radius: 3px; }
   .exlist li.you { background: rgba(116,224,247,.08); box-shadow: inset 2px 0 0 var(--cast); }

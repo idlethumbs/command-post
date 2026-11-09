@@ -253,7 +253,9 @@ try { exOpen = localStorage.getItem("arcanum.exOpen") === "1"; } catch {}
 function exchangeBlock(s) {
   const r = s.recent ?? [];
   if (!r.length) return "";
-  return `<details class="exchange" id="exchange"${exOpen ? " open" : ""}><summary class="lbl"><span>Recent exchange · ${r.length}</span><span>newest last · click a line to expand</span></summary>
+  const mine = r.findLast(e => e.who === "you") ?? r.at(-1), said = (mine.text || (mine.images ? `[${mine.images} image${mine.images > 1 ? "s" : ""}]` : "")).replace(/\s+/g, " ");
+  return `<details class="exchange" id="exchange"${exOpen ? " open" : ""}><summary><span class="lbl said">${mine.who === "you" ? "You said" : "Mage said"}</span><span class="lbl whole">Recent exchange · ${r.length} · newest last</span>
+      <span class="last">${esc(said)}</span><span class="at">${ago(mine.at)}</span><span class="more lbl"></span></summary>
     <ul class="exlist" id="exlist">${r.map(e => `<li class="${e.who}"><span class="who">${e.who === "you" ? "You" : "Mage"}</span>
       <span class="tx">${e.images ? `<span class="img">[${e.images} image${e.images > 1 ? "s" : ""}]</span>` : ""}${esc(e.text)}</span><span class="at">${ago(e.at)}</span></li>`).join("")}</ul></details>`;
 }
@@ -305,13 +307,33 @@ function wordBlock(s) {
     <div class="btns">${portalButton(s)}</div></div>`;
   const multi = s.host === "cmux";
   return `<form class="orders" id="orders"><label class="lbl" for="reply">Send word</label>
-    ${multi ? `<button type="button" class="suggest" id="suggest" hidden></button>` : ""}
-    <textarea id="reply" placeholder="${s.state === "cast" ? "It's casting. Your word waits until it finishes…" : multi ? "Type your reply. Paste or drop images too…" : "Type your reply…"}" ${multi ? "" : 'rows="2"'}></textarea>
+    <textarea id="reply" placeholder="${esc(replyPlaceholder(s))}" ${multi ? "" : 'rows="2"'}></textarea>
     <div class="attach" id="attach"></div>
     <div class="via">Typed into its ${esc(s.where)} prompt as if you were there.${multi ? " Images arrive as attachments, like pasting into Claude." : " One line, no images, for now."} If you've left a half-typed draft there, Arcanum won't touch it.</div>
     <div class="btns"><button class="btn" type="submit">Send word</button>${portalButton(s)}
     <span class="hint"><kbd>⌘</kbd> + <kbd>⏎</kbd> send</span></div></form>`;
 }
+/* Claude's grey prompt suggestion becomes the reply box's placeholder (Tab takes it), so it never moves the layout.
+   Cached per mage so live re-renders show it at once; re-read from the screen at most every few seconds. */
+const hints = {}, hintAt = {};
+function replyPlaceholder(s) {
+  if (s.state === "cast") return "It's casting. Your word waits until it finishes…";
+  if (hints[s.id]) return `${hints[s.id]}   ⇥ Tab to use Claude's suggestion`;
+  return s.host === "cmux" ? "Type your reply. Paste or drop images too…" : "Type your reply…";
+}
+function refreshHint(s, ta) {
+  if (s.host !== "cmux" || Date.now() - (hintAt[s.id] ?? 0) < 4000) return;
+  hintAt[s.id] = Date.now();
+  fetch(`/api/sessions/${encodeURIComponent(s.id)}/suggestion`).then(r => r.json()).then(j => {
+    if ((j.text ?? null) === (hints[s.id] ?? null)) return;
+    hints[s.id] = j.text ?? null;
+    if (ta.isConnected) ta.placeholder = replyPlaceholder(s);
+  }).catch(() => {});
+}
+setInterval(() => {   // a suggestion lands a moment after the turn ends, often with no re-render to fetch it
+  const ta = $("#reply"), s = ta && data?.sessions?.find(x => x.id === ui.session);
+  if (s) refreshHint(s, ta);
+}, 5000);
 const drafts = {};   // unsent text per mage survives live re-renders
 const pics = {};     // pasted images per mage: [{ id?, url, busy }]
 function renderAttach(s) {
@@ -351,19 +373,9 @@ function wireComms(s) {
     f.ondragover = e => { if ([...e.dataTransfer.items].some(i => i.type.startsWith("image/"))) { e.preventDefault(); f.classList.add("dropping"); } };
     f.ondragleave = () => f.classList.remove("dropping");
     f.ondrop = e => { f.classList.remove("dropping"); const fl = imagesIn(e.dataTransfer); if (fl.length) { e.preventDefault(); addImages(s, fl); } };
-    const sg = $("#suggest");
-    const take = () => { if (sg.hidden) return; ta.value = sg.dataset.text; drafts[s.id] = ta.value; ta.focus(); };
-    if (sg) {
-      sg.onclick = take;
-      fetch(`/api/sessions/${encodeURIComponent(s.id)}/suggestion`).then(r => r.json()).then(j => {
-        if (!sg.isConnected || !j.text) return;
-        sg.dataset.text = j.text; sg.hidden = false;
-        sg.innerHTML = `<span class="lbl">Claude suggests</span><span class="tx">${esc(j.text)}</span><kbd>tab</kbd>`;
-        fitMissive();
-      }).catch(() => {});
-    }
+    refreshHint(s, ta);
     ta.onkeydown = e => {
-      if (e.key === "Tab" && !e.shiftKey && !ta.value && sg && !sg.hidden) { e.preventDefault(); return take(); }
+      if (e.key === "Tab" && !e.shiftKey && !ta.value && hints[s.id] && s.state !== "cast") { e.preventDefault(); ta.value = hints[s.id]; drafts[s.id] = ta.value; return; }
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); f.requestSubmit(); }
     };
     f.onsubmit = async e => {
@@ -375,7 +387,7 @@ function wireComms(s) {
       const r = await post(`/api/sessions/${encodeURIComponent(s.id)}/send`, { text, images: imgs.map(p => p.id) });
       toast(r.message ?? r.error);
       if (r.ok) { burst(document.querySelector(`.mage[data-session="${CSS.escape(s.id)}"] canvas`), "word"); cue.word(); }
-      if (r.ok) { delete drafts[s.id]; ta.value = ""; imgs.forEach(p => URL.revokeObjectURL(p.url)); delete pics[s.id]; renderAttach(s); }
+      if (r.ok) { delete drafts[s.id]; hints[s.id] = null; hintAt[s.id] = 0; ta.placeholder = replyPlaceholder(s); ta.value = ""; imgs.forEach(p => URL.revokeObjectURL(p.url)); delete pics[s.id]; renderAttach(s); }
       btn.disabled = false; btn.textContent = "Send word";
     };
   }
