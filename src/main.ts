@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ARCANUM_DIR, CLAUDE_DIR, PORT } from "./paths";
-import { findCmux, planClose, planPortal, readCmuxLayout, run, runPortal } from "./portal";
+import { cmuxAccessDenied, findCmux, planClose, planPortal, readCmuxLayout, run, runPortal } from "./portal";
 import { readPs } from "./procs";
 import { answerSeal, readSeal, readSuggestion, sendWord, type SendCtx } from "./send";
 import { pruneUploads } from "./uploads";
@@ -48,7 +48,7 @@ const rebuild = () => {
     snapshot = buildSnapshot({ claudeDir: CLAUDE_DIR, arcanumDir: ARCANUM_DIR, ps: readPs(), env: realEnv, hasCmux: !!cmux });
   } catch (e) { console.error("Couldn't read sessions:", (e as Error).message); return; }
   applyIntel(snapshot.sessions, hooks);
-  applyReach(snapshot.sessions, reach);
+  applyReach(snapshot.sessions, reach, cmuxAccessDenied());
   const key = JSON.stringify({ ...snapshot, generatedAt: 0 });
   if (key !== lastKey) { lastKey = key; app.broadcast(snapshot); }
   syncTranscriptWatches();

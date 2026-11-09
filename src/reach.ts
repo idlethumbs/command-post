@@ -33,10 +33,11 @@ export function appTabTtys(app: "Terminal" | "iTerm2"): Promise<Set<string> | un
 }
 
 /** Withdraw what can't work: no reply box, no seal buttons, no exact portal for a session whose terminal is gone. */
-export function applyReach(sessions: Session[], reach: Map<string, boolean>) {
+export function applyReach(sessions: Session[], reach: Map<string, boolean>, cmuxDenied = false) {
   for (const s of sessions) {
     if (reach.get(s.id) !== false) continue;
     s.unreachable = true; s.reply = "none"; s.seal = false;
+    if (cmuxDenied && s.host === "cmux") s.blocked = "cmux-access";
     if (s.portal === "exact") s.portal = "app";
   }
 }

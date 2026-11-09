@@ -293,7 +293,9 @@ function sealBlock(s) {
     <div class="btns"><button class="btn" data-seal="grant">Grant seal</button><button class="btn deny" data-seal="refuse">Refuse</button>${portalButton(s)}
     <span class="hint">Presses Yes or No in its prompt</span></div></div>`;
 }
-const unreachableNote = s => `<div class="orders"><span class="lbl">Send word</span>
+const unreachableNote = s => s.blocked === "cmux-access" ? `<div class="orders"><span class="lbl">Send word</span>
+    <div class="via">cmux won't let Arcanum in: its socket access only allows processes started inside cmux, and Arcanum was started from the Dock. In cmux, open <b>Settings → Automation</b> and set socket access to <b>Password</b> (or Allow all). ${esc(s.name)} reconnects here within a few seconds.</div>
+    <div class="btns">${portalButton(s)}</div></div>` : `<div class="orders"><span class="lbl">Send word</span>
     <div class="via">Arcanum can't find ${esc(s.name)}'s ${esc(s.where)} ${s.host === "cmux" ? "pane" : "tab"} right now, so it won't type into it. If the window is still open, reply there; it reconnects here automatically when found.</div>
     <div class="btns">${portalButton(s)}</div></div>`;
 function wordBlock(s) {
@@ -433,7 +435,7 @@ function renderComms(s) {
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
       ${manaRow(s.mana, s.costUsd)}
-      <dt>DWELLS IN</dt><dd>${esc(s.where)}${s.unreachable ? ` <span class="chip rest" title="Its pane or tab couldn't be found">UNREACHABLE</span>` : ""}</dd>
+      <dt>DWELLS IN</dt><dd>${esc(s.where)}${s.unreachable ? ` <span class="chip rest" title="${s.blocked ? "cmux refused Arcanum's connection" : "Its pane or tab couldn't be found"}">UNREACHABLE</span>` : ""}</dd>
       <dt>FOLDER</dt><dd class="crumb">${esc(home(s.cwd))}${s.branch ? ` · ${esc(s.branch)}` : ""}</dd></dl></div></div>
     ${s.note ? `<div class="via">${esc(s.note)}</div>` : ""}
     ${questLine(s)}

@@ -33,7 +33,7 @@ export interface Session {
   waitingFor?: string; cwd: string; branch?: string;
   jobId?: string; tmux?: string; portal?: "exact" | "app" | "none"; note?: string;
   recent?: Exchange[];
-  status?: string; reply?: "type" | "none"; seal?: boolean; unreachable?: boolean; promote?: boolean;
+  status?: string; reply?: "type" | "none"; seal?: boolean; unreachable?: boolean; blocked?: "cmux-access"; promote?: boolean;
   mana?: Mana;
   /** From hooks: answered through the hook (any terminal), what it asks, its pane, its cost. */
   sealVia?: "hook" | "keys"; request?: string; link?: { cmuxSurface?: string; cmuxWorkspace?: string }; costUsd?: number;

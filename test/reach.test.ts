@@ -26,3 +26,9 @@ test("if Terminal can't be asked, its sessions count as unreachable rather than 
   const reach = await checkReach([s("a", 4681, "terminal")], { ps, tabTtys: async () => undefined });
   expect(reach.get("a")).toBe(false);
 });
+
+test("when cmux refuses the socket, its unreachable sessions say why", () => {
+  const sessions = [s("c", 1, "cmux"), s("t", 2, "terminal")];
+  applyReach(sessions, new Map([["c", false], ["t", false]]), true);
+  expect(sessions.map(x => x.blocked)).toEqual(["cmux-access", undefined]);
+});

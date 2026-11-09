@@ -166,9 +166,13 @@ export function findCmux(): { bin: string; app: string } | undefined {
   return undefined;
 }
 
+/** True after cmux refused the socket: its access mode lets only processes started inside cmux connect, and this one wasn't. */
+let denied = false;
+export const cmuxAccessDenied = () => denied;
+
 export function readCmuxLayout(bin: string): Promise<CmuxLayout | undefined> {
   return new Promise(ok => execFile(bin, ["top", "--all", "--processes", "--format", "tsv", "--id-format", "both"], { timeout: 4000, maxBuffer: 8 << 20, env: { ...process.env, CMUX_QUIET: "1" } },
-    (e, out) => ok(e ? undefined : parseCmuxTop(out))));
+    (e, out, err) => { denied = !!e && /access denied/i.test(`${err} ${e.message}`); ok(e ? undefined : parseCmuxTop(out)); }));
 }
 
 /** What the UI can promise before clicking: exact tab, app window only, or nothing. */
