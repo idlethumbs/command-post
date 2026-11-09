@@ -41,16 +41,11 @@ const home = p => p.replace(/^\/Users\/[^/]+/, "~");
 /* claude-opus-5-5 → Opus 5.5 · claude-haiku-4-5-20251001 → Haiku 4.5 */
 const prettyModel = id => { const m = /claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-|$)/.exec(id ?? ""); return m ? `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}${m[3] ? "." + m[3] : ""}` : id; };
 
-/* the mage's status line, as its terminal footer shows it: branch » 🧠 model · 🧵 context · 🚦 5-hour usage · ⏳ until it resets.
+/* your plan's usage limit, as the terminal footer shows it: 🚦 used · ⏳ until it resets (rank, mana and branch are in the rows below).
    Traffic light by pressure, like the footer: plain until 60%, then amber, orange from 75, red from 90 */
-const pressure = p => p >= 90 ? " red" : p >= 75 ? " orange" : p >= 60 ? " amber" : "";
+const pressure = p => p >= 90 ? "red" : p >= 75 ? "orange" : p >= 60 ? "amber" : "";
 const untilReset = at => { const d = Math.floor((at - Date.now()) / 1000); return d <= 0 ? "now" : d < 3600 ? `${Math.floor(d / 60)}m` : d < 86400 ? `${Math.floor(d / 3600)}h ${Math.floor(d % 3600 / 60)}m` : `${Math.floor(d / 86400)}d`; };
-function footer(s) {
-  const model = (prettyModel(s.modelId) ?? RANK[s.model].model).toLowerCase(), parts = [`🧠 ${esc(model)}`];
-  if (s.mana) parts.push(`<span class="${pressure(s.mana.pct).trim()}">🧵 ${s.mana.pct}%</span>`);
-  if (s.limits) parts.push(`<span class="${pressure(s.limits.pct).trim()}">🚦 ${s.limits.pct}%</span>`, ...(s.limits.resetsAt ? [`⏳ ${untilReset(s.limits.resetsAt)}`] : []));
-  return `<span class="footer">${s.branch ? `<span class="br">${esc(s.branch)}</span> » ` : ""}${parts.join(" · ")}</span>`;
-}
+const footer = s => s.limits ? `<span class="footer" title="Your plan's 5-hour usage limit (shared by all sessions)"><span class="${pressure(s.limits.pct)}">🚦 ${s.limits.pct}%</span>${s.limits.resetsAt ? ` · ⏳ ${untilReset(s.limits.resetsAt)}` : ""}</span>` : "";
 
 /* mana: context fullness. Warm from 70%, hot from 85% (time for /compact) */
 const manaClass = m => m.pct >= 85 ? " hot" : m.pct >= 70 ? " warm" : "";
@@ -772,7 +767,8 @@ function onData(next) {
   } else {
     // don't yank the charter out from under someone typing a name
     if (document.activeElement?.id === "rname" || document.activeElement?.id === "resumeText") return renderSide();
-    const typing = document.activeElement?.id === "reply";
+    const typing = document.activeElement?.id === "reply" && document.activeElement;
+    const caret = typing && { a: typing.selectionStart, b: typing.selectionEnd, dir: typing.selectionDirection, top: typing.scrollTop };
     // keep where you were reading: the missive and the exchange list scroll on their own, and a rebuild would reset them
     const was = ui.session, sc = $("#view").scrollTop, xs = document.querySelector("#comms .xmit")?.scrollTop, es = $("#exlist")?.scrollTop;
     renderRealm(); $("#view").scrollTop = sc;
@@ -781,7 +777,7 @@ function onData(next) {
       if (x && xs !== undefined) x.scrollTop = xs;
       if (e && es !== undefined) e.scrollTop = es;
     }
-    if (typing) { const t = $("#reply"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+    if (typing) { const t = $("#reply"); if (t) { t.focus(); t.setSelectionRange(caret.a, caret.b, caret.dir); t.scrollTop = caret.top; } }   // keep the cursor where you left it
     playEvents(ev);
   }
 }
