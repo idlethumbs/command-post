@@ -219,6 +219,7 @@
   .chip.counsel { background: var(--counsel); color: #fff; } .chip.seal { background: var(--gold); } .chip.cast { background: var(--cast); } .chip.rest { background: var(--muted); }
 
   .comms { padding: 16px; display: grid; gap: 14px; }
+  #comms { padding: 4px 0 0; min-width: 0; }   /* the selected mage sits straight on the stage, no frame of its own */
   .dossier { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
   .portrait { border-radius: 3px; box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--frame); padding: 0 3px; background: var(--portrait-bg); align-self: center; }
   .dossier h3 { font-size: 17px; font-weight: 700; margin: 0 0 3px; word-break: break-word; line-height: 1.2; }

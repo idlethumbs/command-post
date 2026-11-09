@@ -181,7 +181,7 @@ function renderRealm(entering) {
     ${ui.charter ? `<section class="card charter" id="charter"></section>` : ""}
     <section class="scene" id="scene" aria-label="Mages in ${esc(r.name)}"><div class="troupe" id="troupe"></div></section>
     ${t.length || dep.length ? `<div class="op"><section class="circle" aria-label="Mages"><span class="lbl">Circle · ${t.length}</span><div id="circle"></div></section>
-      <section class="card comms" id="comms" aria-live="polite"></section></div>`
+      <section class="comms" id="comms" aria-live="polite"></section></div>`
       : `<section class="card comms"><p>No mages are in this realm right now. It stays on the map so you can find it again.</p></section>`}
     ${r.id === "wilds" ? `<p class="via" style="margin:0">The Wilds hold sessions started outside any realm: folders that aren't repos, temp folders, and workspace folders like ~/projects. Select a mage and use <b>Found a realm here</b> to give its folder a realm of its own.</p>` : ""}</div>`;
   $("#back").onclick = goMap;
@@ -259,20 +259,35 @@ function exchangeBlock(s) {
     <ul class="exlist" id="exlist">${r.map(e => `<li class="${e.who}"><span class="who">${e.who === "you" ? "You" : "Mage"}</span>
       <span class="tx">${e.images ? `<span class="img">[${e.images} image${e.images > 1 ? "s" : ""}]</span>` : ""}${esc(e.text)}</span><span class="at">${ago(e.at)}</span></li>`).join("")}</ul></details>`;
 }
-/* the missive takes whatever height is left once the reply box fits on screen (never under 160px), so you can reply without scrolling */
+/* the missive (and the exchange list, when open) share whatever height is left once the reply box fits on screen,
+   so you can reply without scrolling. The exchange gets up to 40% of it; neither drops below a readable minimum. */
 function fitMissive() {
   const x = document.querySelector("#comms .xmit"), f = document.querySelector("#comms form.orders, #comms .orders"), st = $("#view");
   if (!x || !f) return;
-  x.style.maxHeight = "";
+  const ex = document.querySelector("#comms #exchange[open] #exlist");
+  x.style.maxHeight = ""; if (ex) ex.style.maxHeight = "";
   if (matchMedia("(max-width: 900px)").matches) return;   // stacked layout: the page scrolls as a whole
+  const exNat = ex ? ex.scrollHeight : 0;
+  if (ex) ex.style.maxHeight = "0px";                       // measure everything else with the list folded away
   const r = e => e.getBoundingClientRect(), pad = parseFloat(getComputedStyle(st).paddingBottom) || 0;
   const below = r(f).bottom - r(x).bottom, top = r(x).top - r(st).top + st.scrollTop;
-  x.style.maxHeight = `${Math.max(160, Math.floor(st.clientHeight - pad - top - below))}px`;
+  const avail = Math.floor(st.clientHeight - pad - top - below);
+  const exH = ex ? Math.max(80, Math.min(exNat, Math.floor(avail * 0.4))) : 0;
+  x.style.maxHeight = `${Math.max(120, avail - exH)}px`;
+  if (ex) ex.style.maxHeight = `${exH}px`;
 }
 addEventListener("resize", fitMissive);
+// re-fit when anything around the missive changes size after drawing: fonts arriving, a seal's text loading, image thumbnails, a dragged-taller reply box
+const refit = new ResizeObserver(() => requestAnimationFrame(fitMissive));
+function watchPanel() {
+  refit.disconnect();
+  const c = $("#comms"); if (!c) return;
+  for (const el of c.children) if (!el.classList.contains("xmit")) refit.observe(el);
+  refit.observe(c.querySelector(".dossier") ?? c);
+}
 function wireExchange() {
   const d = $("#exchange"), ex = $("#exlist");
-  if (d) d.ontoggle = () => { exOpen = d.open; try { localStorage.setItem("arcanum.exOpen", exOpen ? "1" : "0"); } catch {} if (d.open) ex.scrollTop = ex.scrollHeight; fitMissive(); };
+  if (d) d.ontoggle = () => { exOpen = d.open; try { localStorage.setItem("arcanum.exOpen", exOpen ? "1" : "0"); } catch {} fitMissive(); if (d.open) ex.scrollTop = ex.scrollHeight; };
   if (ex) { ex.scrollTop = ex.scrollHeight; ex.onclick = e => e.target.closest("li")?.classList.toggle("open"); }
 }
 /* quest and the matter at hand share one line; the briefing is dropped when it only repeats the missive's opening (or the title) */
@@ -309,7 +324,7 @@ function wordBlock(s) {
   return `<form class="orders" id="orders"><label class="lbl" for="reply">Send word</label>
     <textarea id="reply" placeholder="${esc(replyPlaceholder(s))}" ${multi ? "" : 'rows="2"'}></textarea>
     <div class="attach" id="attach"></div>
-    <div class="via">Typed into its ${esc(s.where)} prompt as if you were there.${multi ? " Images arrive as attachments, like pasting into Claude." : " One line, no images, for now."} If you've left a half-typed draft there, Arcanum won't touch it.</div>
+    <div class="via">Typed into its ${esc(s.where)} prompt as if you were there${multi ? "; images arrive as attachments" : "; one line, no images, for now"}. A half-typed draft there is never touched.</div>
     <div class="btns"><button class="btn" type="submit">Send word</button>${portalButton(s)}
     <span class="hint"><kbd>⌘</kbd> + <kbd>⏎</kbd> send</span></div></form>`;
 }
@@ -423,7 +438,7 @@ function renderDeparted(d) {
         <label class="check"><input type="checkbox" id="resumeFocus"${prefs.summonFocus ? " checked" : ""}> Switch to it now</label></div></form>`;
   $("#portrait").appendChild(makeMage({ id: d.id, model: d.model, state: "rest" }, 2, `${RANK[d.model].title} ${d.name}`));
   wireExchange();
-  fitMissive();
+  fitMissive(); watchPanel();
   const ta = $("#resumeText"), btn = $("#resumeBtn");
   ta.value = drafts[d.id] ?? "";
   const label = () => { btn.textContent = ta.value.trim() ? "Resume and send word" : "Resume in cmux"; };
@@ -456,7 +471,7 @@ function renderComms(s) {
     ${s.state === "seal" ? sealBlock(s) : wordBlock(s)}`;
   $("#portrait").appendChild(makeMage(s, 1, `${RANK[s.model].title} ${s.name}`));
   wireComms(s);
-  fitMissive();
+  fitMissive(); watchPanel();
 }
 
 /* ---------------- charter: edits go to ~/.arcanum/realms.json via the daemon ---------------- */
