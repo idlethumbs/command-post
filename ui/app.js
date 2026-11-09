@@ -269,9 +269,10 @@ try { exOpen = localStorage.getItem("arcanum.exOpen") === "1"; } catch {}
 function exchangeBlock(s) {
   const r = s.recent ?? [];
   if (!r.length) return "";
-  const mine = r.findLast(e => e.who === "you") ?? r.at(-1), said = (mine.text || (mine.images ? `[${mine.images} image${mine.images > 1 ? "s" : ""}]` : "")).replace(/\s+/g, " ");
-  return `<details class="exchange" id="exchange"${exOpen ? " open" : ""}><summary><span class="lbl said">${mine.who === "you" ? "You said" : "Mage said"}</span><span class="lbl whole">Recent exchange · ${r.length} · newest last</span>
-      <span class="last">${esc(said)}</span><span class="at">${ago(mine.at)}</span><span class="more lbl"></span></summary>
+  // folded, it previews your last word; the mage's would only repeat the missive above, so without one it just names itself
+  const mine = r.findLast(e => e.who === "you"), said = mine && (mine.text || (mine.images ? `[${mine.images} image${mine.images > 1 ? "s" : ""}]` : "")).replace(/\s+/g, " ");
+  return `<details class="exchange" id="exchange"${exOpen ? " open" : ""}><summary>${mine ? `<span class="lbl said">You said</span>` : `<span class="lbl said">Recent exchange · ${r.length}</span>`}<span class="lbl whole">Recent exchange · ${r.length} · newest last</span>
+      <span class="last">${esc(said ?? "")}</span>${mine ? `<span class="at">${ago(mine.at)}</span>` : ""}<span class="more lbl"></span></summary>
     <ul class="exlist" id="exlist">${r.map(e => `<li class="${e.who}"><span class="who">${e.who === "you" ? "You" : "Mage"}</span>
       <span class="tx">${e.images ? `<span class="img">[${e.images} image${e.images > 1 ? "s" : ""}]</span>` : ""}${esc(e.text)}</span><span class="at">${ago(e.at)}</span></li>`).join("")}</ul></details>`;
 }

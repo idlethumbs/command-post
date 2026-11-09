@@ -31,3 +31,15 @@ test("skips a line cut in half by the tail read", () => {
   expect(() => parseTranscript(cut)).not.toThrow();
   expect(parseTranscript(cut).aiTitle).toBe("Fix the thing");
 });
+
+test("a message sent mid-turn (queued, then absorbed) counts as yours", () => {
+  const at = "2026-11-09T15:24:47.644Z";
+  const t = parseTranscript([
+    { type: "assistant", timestamp: "2026-11-09T15:24:40.000Z", message: { id: "m1", content: [{ type: "text", text: "Working on it." }] } },
+    { type: "queue-operation", operation: "enqueue", timestamp: at, content: "also fix the footer" },
+    { type: "attachment", timestamp: at, attachment: { type: "queued_command", prompt: "also fix the footer", origin: { kind: "human" }, commandMode: "prompt" } },
+    { type: "attachment", timestamp: at, attachment: { type: "queued_command", prompt: "a task notification", origin: { kind: "task" } } },
+  ].map(r => JSON.stringify(r)).join("\n"));
+  expect(t.recent?.map(e => [e.who, e.text])).toEqual([["mage", "Working on it."], ["you", "also fix the footer"]]);
+  expect(t.lastHumanAt).toBe(Date.parse(at));
+});

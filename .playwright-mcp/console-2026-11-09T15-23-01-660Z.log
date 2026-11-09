@@ -1,0 +1,13 @@
+[  108006ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  113003ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  113003ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/presence:0
+[  118006ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  123004ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  128004ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  128004ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/presence:0
+[  133005ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  138005ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  143005ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  143005ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/presence:0
+[  148004ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0
+[  153005ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:7338/api/sessions/b8ecb44c-eb3f-4bde-8c86-b225643bb66e/suggestion:0

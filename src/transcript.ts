@@ -50,6 +50,12 @@ export function parseTranscript(text: string): TranscriptSummary {
         const images = Array.isArray(c) ? c.filter((b: any) => b?.type === "image").length : 0;
         if (text.trim() || images) recent.push({ who: "you", text: clip(text.replace(/\[Image #\d+\]\s*/g, "").trim()), at, ...(images ? { images } : {}) });
       }
+    } else if (r.type === "attachment" && r.attachment?.type === "queued_command" && r.attachment.origin?.kind === "human" && at) {
+      // a message you sent while it was mid-turn: Claude reads it straight away, so it counts as your word
+      const c = r.attachment.prompt;
+      const text = typeof c === "string" ? c : textOf(c) ?? "";
+      const images = Array.isArray(c) ? c.filter((b: any) => b?.type === "image").length : 0;
+      if (text.trim() || images) { s.lastHumanAt = at; recent.push({ who: "you", text: clip(text.replace(/\[Image #\d+\]\s*/g, "").trim()), at, ...(images ? { images } : {}) }); }
     } else if (r.type === "ai-title" && r.aiTitle) {
       s.aiTitle = r.aiTitle;
     } else if (r.type === "system" && r.subtype === "away_summary" && typeof r.content === "string") {
