@@ -205,10 +205,10 @@
   @keyframes bbob { 50% { translate: -50% -4px; } }
   @keyframes drift { 0% { translate: -20% 4px; opacity: 0; } 50% { opacity: 1; } 100% { translate: 20% -10px; opacity: 0; } }
 
-  .op { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .op { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 16px; align-items: start; }
   @media (max-width: 1100px) { .op { grid-template-columns: 1fr; } }
   .card { background: var(--panel); border-radius: 6px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--frame); }
-  .circle { padding: 12px; display: grid; gap: 4px; }
+  .circle { padding: 4px 0 0; display: grid; gap: 4px; }   /* bare list beside the mage panel: no frame of its own */
   .crow { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 7px 9px; border-radius: 4px; }
   .crow:hover { background: var(--panel-hi); }
   .crow.sel, .crow:focus-visible { background: var(--panel-hi); box-shadow: inset 3px 0 0 var(--gold); outline: none; }
@@ -234,7 +234,7 @@
   .paper code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; background: rgba(42,32,22,.08); padding: 0 4px; border-radius: 2px; }
   .paper.casting p:last-child::after { content: "▌"; animation: blink .8s steps(2) infinite; }
   /* fallback; fitMissive() sizes it to the space left above the reply box */
-  .xmit { max-height: max(160px, 30vh); overflow: auto; font-size: 17px; line-height: 1.55; padding: 18px 22px; }
+  .xmit { max-height: max(160px, 30vh); overflow: auto; padding: 14px 18px; }
   .comms { gap: 12px; }
   .orders { display: grid; gap: 10px; }
   .orders textarea {
@@ -284,20 +284,20 @@
   .paper th { font-weight: 700; color: #6a4a1a; }
 
   /* readable faces for reading and writing; pixel faces stay for titles, labels and chrome */
-  .paper { font-family: var(--f-read); font-size: 18px; line-height: 1.5; font-variant-numeric: lining-nums; }
+  .paper { font-family: var(--f-read); font-size: 16px; line-height: 1.5; font-variant-numeric: lining-nums; }
   .paper table { font-variant-numeric: lining-nums tabular-nums; }
   .orders textarea, .raven .msg { font-variant-numeric: lining-nums; }
   .paper .lbl { font-family: var(--f-ui); }
   .paper b, .paper th { font-weight: 700; }
-  .paper h4 { font-family: var(--f-read); font-weight: 700; font-size: 18px; }
-  .xmit { font-size: 18px; line-height: 1.55; }
-  .paper table { font-family: var(--f-read); font-size: 17px; }
-  .paper code { font-size: 14px; }
+  .paper h4 { font-family: var(--f-read); font-weight: 700; font-size: 16px; }
+  .xmit { font-size: 16px; line-height: 1.5; }
+  .paper table { font-family: var(--f-read); font-size: 15px; }
+  .paper code { font-size: 13px; }
   .orders textarea, .scry input, .charter input[type=text] { font-family: var(--f-write); font-size: 17px; line-height: 1.45; }
   .raven .msg { font-family: var(--f-write); font-size: 15px; line-height: 1.35; }
 
   /* recent exchange: your words and the mage's replies, dark so it reads as history, not the current missive */
-  .exchange { background: #120f24; border-radius: 4px; box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--frame); padding: 8px 12px; }
+  .exchange { border-top: 1px solid var(--frame); border-bottom: 1px solid var(--frame); padding: 8px 2px; }
   .exchange > summary { display: flex; align-items: baseline; gap: 10px; cursor: pointer; list-style: none; min-width: 0; }
   .exchange > summary::-webkit-details-marker { display: none; }
   .exchange > summary .last { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--f-write); font-size: 15px; color: #ddd4bc; }

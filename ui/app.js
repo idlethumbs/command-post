@@ -180,7 +180,7 @@ function renderRealm(entering) {
       ${r.id === "wilds" ? "" : `<button class="btn alt" id="editRealm" aria-expanded="${ui.charter}">${ui.charter ? "Close charter" : "Edit realm"}</button>`}</div></div>
     ${ui.charter ? `<section class="card charter" id="charter"></section>` : ""}
     <section class="scene" id="scene" aria-label="Mages in ${esc(r.name)}"><div class="troupe" id="troupe"></div></section>
-    ${t.length || dep.length ? `<div class="op"><section class="card circle" aria-label="Mages"><span class="lbl">Circle · ${t.length}</span><div id="circle"></div></section>
+    ${t.length || dep.length ? `<div class="op"><section class="circle" aria-label="Mages"><span class="lbl">Circle · ${t.length}</span><div id="circle"></div></section>
       <section class="card comms" id="comms" aria-live="polite"></section></div>`
       : `<section class="card comms"><p>No mages are in this realm right now. It stays on the map so you can find it again.</p></section>`}
     ${r.id === "wilds" ? `<p class="via" style="margin:0">The Wilds hold sessions started outside any realm: folders that aren't repos, temp folders, and workspace folders like ~/projects. Select a mage and use <b>Found a realm here</b> to give its folder a realm of its own.</p>` : ""}</div>`;
@@ -747,7 +747,14 @@ function onData(next) {
     // don't yank the charter out from under someone typing a name
     if (document.activeElement?.id === "rname" || document.activeElement?.id === "resumeText") return renderSide();
     const typing = document.activeElement?.id === "reply";
-    const sc = $("#view").scrollTop; renderRealm(); $("#view").scrollTop = sc;
+    // keep where you were reading: the missive and the exchange list scroll on their own, and a rebuild would reset them
+    const was = ui.session, sc = $("#view").scrollTop, xs = document.querySelector("#comms .xmit")?.scrollTop, es = $("#exlist")?.scrollTop;
+    renderRealm(); $("#view").scrollTop = sc;
+    if (ui.session === was) {
+      const x = document.querySelector("#comms .xmit"), e = $("#exlist");
+      if (x && xs !== undefined) x.scrollTop = xs;
+      if (e && es !== undefined) e.scrollTop = es;
+    }
     if (typing) { const t = $("#reply"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
     playEvents(ev);
   }
