@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { cleanText, gridText, parseScreen, replyCapability, sealCapability, suggestionOf } from "../src/send";
+import { attachedImages, cleanText, gridText, parseScreen, replyCapability, sealCapability, suggestionOf } from "../src/send";
 import type { Session } from "../src/types";
 
 const fx = (n: string) => readFileSync(path.join(__dirname, "fixtures", n), "utf8");
@@ -60,4 +60,10 @@ test("the faint suggestion is offered only when nothing solid is in the prompt",
   expect(suggestionOf(shot)).toBe("ls -la");
   expect(suggestionOf({ text: shot.text })).toBeUndefined();                        // a host that can't see faint text
   expect(suggestionOf({ text: shot.text, solid: shot.text })).toBeUndefined();     // a real draft
+});
+
+test("images are counted once Claude has attached them to the draft", () => {
+  const R = "─".repeat(40);
+  expect(attachedImages(`${R}\n❯ /tmp/a.png /tmp/b.png\n${R}`)).toBe(0);
+  expect(attachedImages(`${R}\n❯ [Image #1] [Image #2]\n${R}`)).toBe(2);
 });

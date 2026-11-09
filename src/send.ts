@@ -108,12 +108,17 @@ function targetFor(s: Session, ctx: SendCtx): Target | string {
     const loc = ctx.cmux?.layout && surfaceOf(s, ctx.cmux.layout, ctx.ps);
     if (!ctx.cmux || !loc) return "Couldn't find its cmux pane.";
     const bin = ctx.cmux.bin, id = loc.surface;
+    const read = async () => gridText(JSON.parse(await exec(bin, ["rpc", "terminal.replay", JSON.stringify({ surface_id: id })])));
     return {
-      read: async () => gridText(JSON.parse(await exec(bin, ["rpc", "terminal.replay", JSON.stringify({ surface_id: id })]))),
+      read,
       // a bracketed paste: delivered verbatim (newlines, backslashes) and submitted in one step
       type: async (text, images = []) => {
-        // image paths pasted together, unsubmitted, become [Image #n] attachments; then the text submits the lot
-        if (images.length) await exec(bin, ["rpc", "terminal.paste", JSON.stringify({ surface_id: id, text: images.join(" "), submit: false })]);
+        // image paths pasted together, unsubmitted, become [Image #n] attachments; then the text submits the lot.
+        // Claude takes a moment to attach them, and an Enter that lands first is lost, leaving the lot as a draft: wait for them.
+        if (images.length) {
+          await exec(bin, ["rpc", "terminal.paste", JSON.stringify({ surface_id: id, text: images.join(" "), submit: false })]);
+          await waitFor(async () => attachedImages((await read()).text) >= images.length, 4000);
+        }
         await exec(bin, ["rpc", "terminal.paste", JSON.stringify({ surface_id: id, text: images.length ? " " + text : text })]);
       },
       key: async k => { await exec(bin, ["send", "--surface", id, "--", k]); },
@@ -146,6 +151,16 @@ function targetFor(s: Session, ctx: SendCtx): Target | string {
   }
   return `${s.where} can't be typed into. Open it to reply.`;
 }
+
+/** How many [Image #n] attachments sit in the prompt's draft. */
+export function attachedImages(screen: string): number {
+  const sc = parseScreen(screen);
+  return sc.kind === "input" ? (sc.draft.match(/\[Image #\d+\]/g) ?? []).length : 0;
+}
+const waitFor = async (ok: () => Promise<boolean>, ms: number) => {
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise(r => setTimeout(r, 150))) if (await ok().catch(() => false)) return true;
+  return false;
+};
 
 const firstLine = (t: string) => t.split("\n")[0].replace(/\s+/g, " ").slice(0, 80);
 
