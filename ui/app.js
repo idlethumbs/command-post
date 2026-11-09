@@ -248,12 +248,39 @@ async function openPortal(id, btn) {
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-portal]"); if (b) openPortal(b.dataset.portal, b); });
 
+let exOpen = false;   // the recent exchange starts folded; remembered per browser
+try { exOpen = localStorage.getItem("arcanum.exOpen") === "1"; } catch {}
 function exchangeBlock(s) {
   const r = s.recent ?? [];
   if (!r.length) return "";
-  return `<section class="exchange" aria-label="Recent exchange"><div class="lbl"><span>Recent exchange</span><span>newest last · click to expand</span></div>
+  return `<details class="exchange" id="exchange"${exOpen ? " open" : ""}><summary class="lbl"><span>Recent exchange · ${r.length}</span><span>newest last · click a line to expand</span></summary>
     <ul class="exlist" id="exlist">${r.map(e => `<li class="${e.who}"><span class="who">${e.who === "you" ? "You" : "Mage"}</span>
-      <span class="tx">${e.images ? `<span class="img">[${e.images} image${e.images > 1 ? "s" : ""}]</span>` : ""}${esc(e.text)}</span><span class="at">${ago(e.at)}</span></li>`).join("")}</ul></section>`;
+      <span class="tx">${e.images ? `<span class="img">[${e.images} image${e.images > 1 ? "s" : ""}]</span>` : ""}${esc(e.text)}</span><span class="at">${ago(e.at)}</span></li>`).join("")}</ul></details>`;
+}
+/* the missive takes whatever height is left once the reply box fits on screen (never under 160px), so you can reply without scrolling */
+function fitMissive() {
+  const x = document.querySelector("#comms .xmit"), f = document.querySelector("#comms form.orders, #comms .orders"), st = $("#view");
+  if (!x || !f) return;
+  x.style.maxHeight = "";
+  if (matchMedia("(max-width: 900px)").matches) return;   // stacked layout: the page scrolls as a whole
+  const r = e => e.getBoundingClientRect(), pad = parseFloat(getComputedStyle(st).paddingBottom) || 0;
+  const below = r(f).bottom - r(x).bottom, top = r(x).top - r(st).top + st.scrollTop;
+  x.style.maxHeight = `${Math.max(160, Math.floor(st.clientHeight - pad - top - below))}px`;
+}
+addEventListener("resize", fitMissive);
+function wireExchange() {
+  const d = $("#exchange"), ex = $("#exlist");
+  if (d) d.ontoggle = () => { exOpen = d.open; try { localStorage.setItem("arcanum.exOpen", exOpen ? "1" : "0"); } catch {} if (d.open) ex.scrollTop = ex.scrollHeight; fitMissive(); };
+  if (ex) { ex.scrollTop = ex.scrollHeight; ex.onclick = e => e.target.closest("li")?.classList.toggle("open"); }
+}
+/* quest and the matter at hand share one line; the briefing is dropped when it only repeats the missive's opening (or the title) */
+const flat = t => (t ?? "").replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+function questLine(s) {
+  let brief = s.briefing && s.briefing !== "No word yet." ? s.briefing : "";
+  const b = flat(brief).replace(/…$/, "");
+  if (b && (flat(s.lastText).replace(/^…/, "").startsWith(b) || b === flat(s.title))) brief = "";
+  if (!s.title && !brief) return "";
+  return `<div class="quest"><span class="lbl">Quest</span>${s.title ? `<b>${esc(s.title)}</b>` : ""}${s.title && brief ? `<span class="sep">·</span>` : ""}${brief ? `<span class="matter">${esc(brief)}</span>` : ""}</div>`;
 }
 function sealBlock(s) {
   if (s.sealVia === "hook") return `<div class="orders"><span class="lbl">Asks for your seal</span><div class="req" style="white-space:pre-wrap">${esc(s.request ?? "A tool")}</div>
@@ -276,6 +303,7 @@ function wordBlock(s) {
     <div class="btns">${portalButton(s)}</div></div>`;
   const multi = s.host === "cmux";
   return `<form class="orders" id="orders"><label class="lbl" for="reply">Send word</label>
+    ${multi ? `<button type="button" class="suggest" id="suggest" hidden></button>` : ""}
     <textarea id="reply" placeholder="${s.state === "cast" ? "It's casting. Your word waits until it finishes…" : multi ? "Type your reply. Paste or drop images too…" : "Type your reply…"}" ${multi ? "" : 'rows="2"'}></textarea>
     <div class="attach" id="attach"></div>
     <div class="via">Typed into its ${esc(s.where)} prompt as if you were there.${multi ? " Images arrive as attachments, like pasting into Claude." : " One line, no images, for now."} If you've left a half-typed draft there, Arcanum won't touch it.</div>
@@ -309,8 +337,7 @@ async function post(url, body) {
   catch { return { ok: false, message: "The Arcanum daemon isn't answering." }; }
 }
 function wireComms(s) {
-  const ex = $("#exlist");
-  if (ex) { ex.scrollTop = ex.scrollHeight; ex.onclick = e => e.target.closest("li")?.classList.toggle("open"); }
+  wireExchange();
   const f = $("#orders");
   if (f) {
     const ta = $("#reply");
@@ -322,7 +349,21 @@ function wireComms(s) {
     f.ondragover = e => { if ([...e.dataTransfer.items].some(i => i.type.startsWith("image/"))) { e.preventDefault(); f.classList.add("dropping"); } };
     f.ondragleave = () => f.classList.remove("dropping");
     f.ondrop = e => { f.classList.remove("dropping"); const fl = imagesIn(e.dataTransfer); if (fl.length) { e.preventDefault(); addImages(s, fl); } };
-    ta.onkeydown = e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); f.requestSubmit(); } };
+    const sg = $("#suggest");
+    const take = () => { if (sg.hidden) return; ta.value = sg.dataset.text; drafts[s.id] = ta.value; ta.focus(); };
+    if (sg) {
+      sg.onclick = take;
+      fetch(`/api/sessions/${encodeURIComponent(s.id)}/suggestion`).then(r => r.json()).then(j => {
+        if (!sg.isConnected || !j.text) return;
+        sg.dataset.text = j.text; sg.hidden = false;
+        sg.innerHTML = `<span class="lbl">Claude suggests</span><span class="tx">${esc(j.text)}</span><kbd>tab</kbd>`;
+        fitMissive();
+      }).catch(() => {});
+    }
+    ta.onkeydown = e => {
+      if (e.key === "Tab" && !e.shiftKey && !ta.value && sg && !sg.hidden) { e.preventDefault(); return take(); }
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); f.requestSubmit(); }
+    };
     f.onsubmit = async e => {
       e.preventDefault();
       const text = ta.value.trim(), imgs = pics[s.id] ?? [];
@@ -358,8 +399,7 @@ function renderDeparted(d) {
       <dt>STATE</dt><dd><span class="chip ended">DEPARTED</span> ended ${ago(d.endedAt)} ago</dd>
       ${manaRow(d.mana)}
       <dt>FOLDER</dt><dd class="crumb">${esc(home(d.cwd))}${d.branch ? ` · ${esc(d.branch)}` : ""}</dd></dl></div></div>
-    ${d.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(d.title)}</b></div>` : ""}
-    <div class="paper brief"><span class="lbl">The matter at hand</span><p>${esc(d.briefing)}</p></div>
+    ${questLine(d)}
     <div class="paper xmit"><span class="lbl">Its last missive</span>${missive(d.lastText)}</div>
     ${exchangeBlock(d)}
     <form class="orders" id="resumeForm"><label class="lbl" for="resumeText">Resume</label>
@@ -368,7 +408,8 @@ function renderDeparted(d) {
       <div class="btns"><button class="btn" type="submit" id="resumeBtn">Resume in cmux</button>
         <label class="check"><input type="checkbox" id="resumeFocus"${prefs.summonFocus ? " checked" : ""}> Switch to it now</label></div></form>`;
   $("#portrait").appendChild(makeMage({ id: d.id, model: d.model, state: "rest" }, 2, `${RANK[d.model].title} ${d.name}`));
-  const ex = $("#exlist"); if (ex) { ex.scrollTop = ex.scrollHeight; ex.onclick = e => e.target.closest("li")?.classList.toggle("open"); }
+  wireExchange();
+  fitMissive();
   const ta = $("#resumeText"), btn = $("#resumeBtn");
   ta.value = drafts[d.id] ?? "";
   const label = () => { btn.textContent = ta.value.trim() ? "Resume and send word" : "Resume in cmux"; };
@@ -395,13 +436,13 @@ function renderComms(s) {
       <dt>DWELLS IN</dt><dd>${esc(s.where)}${s.unreachable ? ` <span class="chip rest" title="Its pane or tab couldn't be found">UNREACHABLE</span>` : ""}</dd>
       <dt>FOLDER</dt><dd class="crumb">${esc(home(s.cwd))}${s.branch ? ` · ${esc(s.branch)}` : ""}</dd></dl></div></div>
     ${s.note ? `<div class="via">${esc(s.note)}</div>` : ""}
-    ${s.title ? `<div class="soon-note">Quest: <b style="color:var(--parch)">${esc(s.title)}</b></div>` : ""}
-    <div class="paper brief"><span class="lbl">The matter at hand</span><p>${esc(s.briefing)}</p></div>
+    ${questLine(s)}
     <div class="paper xmit${s.state === "cast" ? " casting" : ""}"><span class="lbl">Latest missive</span>${missive(s.lastText)}</div>
     ${exchangeBlock(s)}
     ${s.state === "seal" ? sealBlock(s) : wordBlock(s)}`;
   $("#portrait").appendChild(makeMage(s, 1, `${RANK[s.model].title} ${s.name}`));
   wireComms(s);
+  fitMissive();
 }
 
 /* ---------------- charter: edits go to ~/.arcanum/realms.json via the daemon ---------------- */

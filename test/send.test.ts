@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { cleanText, gridText, parseScreen, replyCapability, sealCapability } from "../src/send";
+import { cleanText, gridText, parseScreen, replyCapability, sealCapability, suggestionOf } from "../src/send";
 import type { Session } from "../src/types";
 
 const fx = (n: string) => readFileSync(path.join(__dirname, "fixtures", n), "utf8");
@@ -53,4 +53,11 @@ test("cmux grid: a live permission dialog is recognised (regression: words were 
 test("a prompt in ! shell mode isn't a Claude prompt, so nothing is typed", () => {
   const R = "─".repeat(40);
   expect(parseScreen(`${R}\n! ls -la\n${R}\n  ! for bash mode`).kind).toBe("unknown");
+});
+
+test("the faint suggestion is offered only when nothing solid is in the prompt", () => {
+  const shot = gridText(JSON.parse(fx("cmux-replay-ghost.json")));
+  expect(suggestionOf(shot)).toBe("ls -la");
+  expect(suggestionOf({ text: shot.text })).toBeUndefined();                        // a host that can't see faint text
+  expect(suggestionOf({ text: shot.text, solid: shot.text })).toBeUndefined();     // a real draft
 });

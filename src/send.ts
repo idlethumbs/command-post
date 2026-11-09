@@ -177,6 +177,21 @@ export async function sendWord(s: Session, raw: string, ctx: SendCtx, images: st
   }
 }
 
+/** Claude's greyed-out next-prompt suggestion: what's in the prompt when faint text counts, provided nothing solid is. */
+export function suggestionOf(shot: { text: string; solid?: string }): string | undefined {
+  if (shot.solid === undefined) return undefined;   // only hosts that report faint text can tell a suggestion from a draft
+  const solid = parseScreen(shot.solid), full = parseScreen(shot.text);
+  return solid.kind === "input" && !solid.draft && full.kind === "input" && full.draft ? full.draft : undefined;
+}
+
+/** The suggestion in the session's prompt right now (cmux only: other hosts can't tell grey text from typed). */
+export async function readSuggestion(s: Session, ctx: SendCtx): Promise<string | undefined> {
+  if (s.host !== "cmux" || s.state === "cast" || s.state === "seal") return undefined;
+  const t = targetFor(s, ctx);
+  if (typeof t === "string") return undefined;
+  try { return suggestionOf(await t.read()); } catch { return undefined; }
+}
+
 /** What the open permission prompt is asking, read off the screen (cmux and tmux only). */
 export async function readSeal(s: Session, ctx: SendCtx): Promise<{ request: string; question: string } | undefined> {
   if (s.state !== "seal" || (s.host !== "cmux" && s.host !== "tmux")) return undefined;

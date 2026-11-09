@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { ARCANUM_DIR, CLAUDE_DIR, PORT } from "./paths";
 import { findCmux, planClose, planPortal, readCmuxLayout, run, runPortal } from "./portal";
 import { readPs } from "./procs";
-import { answerSeal, readSeal, sendWord, type SendCtx } from "./send";
+import { answerSeal, readSeal, readSuggestion, sendWord, type SendCtx } from "./send";
 import { pruneUploads } from "./uploads";
 import { appTabTtys, applyReach, checkReach } from "./reach";
 import { createHookServer, describeRequest, HookStore } from "./hooks";
@@ -148,6 +148,7 @@ const app = createArcanumServer({ uploadsDir, uiDir: path.join(root, "ui"), font
   async readSeal(id) {
     const held = hooks.pending.get(id);
     if (held) { const [request, ...rest] = describeRequest(held.tool, held.input).split("\n"); return { request: [request, ...rest].join("\n"), question: "Allow it?" }; } const s = live(id); return s ? readSeal(s, await sendCtx(s)) : undefined; },
+  async readSuggestion(id) { const s = live(id); return s ? readSuggestion(s, await sendCtx(s)) : undefined; },
 });
 
 // Watch the live registry, and the transcript of every live session (re-armed after each scan).

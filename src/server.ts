@@ -12,6 +12,7 @@ export interface ServerDeps { presence?(client: string, visible: boolean): void;
   sendWord?(sessionId: string, text: string, images: string[]): Promise<{ ok: boolean; message: string } | undefined>;
   answerSeal?(sessionId: string, decision: "grant" | "refuse"): Promise<{ ok: boolean; message: string } | undefined>;
   readSeal?(sessionId: string): Promise<{ request: string; question: string } | undefined>;
+  readSuggestion?(sessionId: string): Promise<string | undefined>;
   dismiss?(sessionId: string, opts: { close: boolean }): Promise<{ ok: boolean; message: string } | undefined>;
   restore?(sessionId: string): { ok: boolean; message: string } | undefined;
   resume?(sessionId: string, req: { prompt?: string; focus: boolean }): Promise<{ ok: boolean; message: string } | undefined>;
@@ -134,6 +135,8 @@ export function createArcanumServer(d: ServerDeps) {
     }
     const rm = /^\/api\/sessions\/([\w-]+)\/seal$/.exec(p);
     if (rm && req.method === "GET") return send(res, 200, (await d.readSeal?.(rm[1])) ?? {});
+    const gm = /^\/api\/sessions\/([\w-]+)\/suggestion$/.exec(p);
+    if (gm && req.method === "GET") return send(res, 200, { text: (await d.readSuggestion?.(gm[1])) ?? null });
     const m = /^\/api\/realms\/([\w-]+)(\/absorb)?$/.exec(p);
     if (m && (req.method === "PATCH" && !m[2] || req.method === "POST" && m[2])) {
       let body: any;
