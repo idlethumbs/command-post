@@ -15,3 +15,11 @@ test("a held request makes any session answerable; status makes mana exact and a
   expect(list[1]).toMatchObject({ link: { cmuxSurface: "s-1" }, mana: { used: 616_000, window: 1_000_000, pct: 62, inferred: false }, costUsd: 4.2 });
   expect(list[2]).toEqual(s("c"));
 });
+
+test("the 5-hour usage limit from any session's status line shows on every live session", () => {
+  const store = new HookStore();
+  store.status({ session_id: "b", context_window: { used_percentage: 10 }, rate_limits: { five_hour: { used_percentage: 13.7, resets_at: 1_800_000_000 } } });
+  const list = [s("a"), s("b")];
+  applyIntel(list, store);
+  expect(list.map(x => x.limits)).toEqual([{ pct: 13, resetsAt: 1_800_000_000_000 }, { pct: 13, resetsAt: 1_800_000_000_000 }]);
+});

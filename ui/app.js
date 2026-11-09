@@ -41,6 +41,17 @@ const home = p => p.replace(/^\/Users\/[^/]+/, "~");
 /* claude-opus-5-5 → Opus 5.5 · claude-haiku-4-5-20251001 → Haiku 4.5 */
 const prettyModel = id => { const m = /claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-|$)/.exec(id ?? ""); return m ? `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}${m[3] ? "." + m[3] : ""}` : id; };
 
+/* the mage's status line, as its terminal footer shows it: branch » 🧠 model · 🧵 context · 🚦 5-hour usage · ⏳ until it resets.
+   Traffic light by pressure, like the footer: plain until 60%, then amber, orange from 75, red from 90 */
+const pressure = p => p >= 90 ? " red" : p >= 75 ? " orange" : p >= 60 ? " amber" : "";
+const untilReset = at => { const d = Math.floor((at - Date.now()) / 1000); return d <= 0 ? "now" : d < 3600 ? `${Math.floor(d / 60)}m` : d < 86400 ? `${Math.floor(d / 3600)}h ${Math.floor(d % 3600 / 60)}m` : `${Math.floor(d / 86400)}d`; };
+function footer(s) {
+  const model = (prettyModel(s.modelId) ?? RANK[s.model].model).toLowerCase(), parts = [`🧠 ${esc(model)}`];
+  if (s.mana) parts.push(`<span class="${pressure(s.mana.pct).trim()}">🧵 ${s.mana.pct}%</span>`);
+  if (s.limits) parts.push(`<span class="${pressure(s.limits.pct).trim()}">🚦 ${s.limits.pct}%</span>`, ...(s.limits.resetsAt ? [`⏳ ${untilReset(s.limits.resetsAt)}`] : []));
+  return `<span class="footer">${s.branch ? `<span class="br">${esc(s.branch)}</span> » ` : ""}${parts.join(" · ")}</span>`;
+}
+
 /* mana: context fullness. Warm from 70%, hot from 85% (time for /compact) */
 const manaClass = m => m.pct >= 85 ? " hot" : m.pct >= 70 ? " warm" : "";
 const kTok = n => n >= 1e6 ? `${(n / 1e6).toFixed(n % 1e6 ? 1 : 0)}M` : `${Math.round(n / 1000)}k`;
@@ -458,7 +469,7 @@ function renderDeparted(d) {
 function renderComms(s) {
   const st = STATE[s.state];
   $("#comms").innerHTML = `<div class="dossier"><div class="portrait" id="portrait"></div><div>
-      <h3>${esc(s.name)}<span class="actions">${s.promote ? `<button class="btn small" data-promote="${esc(s.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
+      <h3>${esc(s.name)}${footer(s)}<span class="actions">${s.promote ? `<button class="btn small" data-promote="${esc(s.id)}">⚑ Found a realm here</button>` : ""}<button class="btn ghost small" data-dismiss="${esc(s.id)}">Dismiss</button></span></h3>
       <dl><dt>RANK</dt><dd>${RANK[s.model].title} · ${esc(prettyModel(s.modelId) ?? RANK[s.model].model)}</dd>
       <dt>STATE</dt><dd><span class="chip ${st.cls}">${st.label.toUpperCase()}</span> for ${ago(s.since)}</dd>
       ${manaRow(s.mana, s.costUsd)}

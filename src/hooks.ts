@@ -11,6 +11,8 @@ export interface HookIntel {
   notification?: { type: string; at: number };            // permission_prompt, idle_prompt, …
   status?: { pct?: number; window?: number; used?: number; costUsd?: number; at: number };
 }
+/** Your plan's 5-hour usage limit, from the status line. Account-wide, so the latest report from any session applies to all. */
+export interface Limits { pct: number; resetsAt?: number; at: number }
 export interface PendingSeal { sessionId: string; tool: string; input: unknown; at: number; settle(decision: "grant" | "refuse" | null): void }
 
 export const HOLD_MS = 110_000;   // under the 120 s hook timeout in settings, so a held prompt always gets an answer
@@ -18,6 +20,7 @@ export const HOLD_MS = 110_000;   // under the 120 s hook timeout in settings, s
 export class HookStore {
   intel = new Map<string, HookIntel>();
   pending = new Map<string, PendingSeal>();
+  limits?: Limits;
   private get(id: string) { let i = this.intel.get(id); if (!i) this.intel.set(id, i = {}); return i; }
 
   event(name: string, p: any, ctx: any, now = Date.now()) {
@@ -41,6 +44,9 @@ export class HookStore {
     const used = fromUsage || (window && pct !== undefined ? Math.round(window * pct / 100) : undefined);
     const costUsd = typeof p.cost?.total_cost_usd === "number" ? p.cost.total_cost_usd : undefined;
     this.get(id).status = { pct, window, used, costUsd, at: now };
+    const fh = p.rate_limits?.five_hour;
+    if (typeof fh?.used_percentage === "number")
+      this.limits = { pct: fh.used_percentage, resetsAt: typeof fh.resets_at === "number" ? fh.resets_at * 1000 : undefined, at: now };
   }
 
   /** Hold a permission request for the dashboard. Resolves with the hook's stdout (empty = let the terminal ask as usual). */

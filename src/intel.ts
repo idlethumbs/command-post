@@ -16,5 +16,6 @@ export function applyIntel(sessions: Session[], store: HookStore) {
       s.mana = { used: st.used ?? Math.round(window * st.pct / 100), window, pct: Math.min(100, Math.round(st.pct)), inferred: !st.window };
     }
     if (st?.costUsd !== undefined) s.costUsd = st.costUsd;
+    if (store.limits) s.limits = { pct: Math.floor(store.limits.pct), resetsAt: store.limits.resetsAt };
   }
 }
